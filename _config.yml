@@ -7,27 +7,27 @@
 
 # Site Settings
 title                    : "Yuan Zhou | Homepage"
-description              : "Personal academic homepage of Yuan Zhou. Incoming Master's student at Dalian University of Technology, focusing on Natural Language Processing (NLP)."
-repository               : "Mindwells/Mindwells.github.io" # <-- 极其注意：如果你改了GitHub用户名，请把这里替换为“新用户名/新用户名.github.io”
-google_scholar_stats_use_cdn : false # <-- 哈基米极其关键的微调：既然没有谷歌学术，将其关闭防止脚本报错
+description              : "Dalian University of Technology, School of Computer Science and Technology"
+repository               : "Mindwells/Mindwells.github.io"
+google_scholar_stats_use_cdn : false
 
 # google analytics
-google_analytics_id      :  # get google_analytics_id from https://analytics.google.com/analytics/
+google_analytics_id      : 
 
 # SEO Related
-google_site_verification :  # get google_site_verification from https://search.google.com/search-console/about
-bing_site_verification   :  # get bing_site_verification from https://www.bing.com/webmasters/about
-baidu_site_verification  :  # get baidu_site_verification from https://ziyuan.baidu.com/login/index?u=/site/index
+google_site_verification : 
+bing_site_verification   : 
+baidu_site_verification  : 
 
 # Site Author
 author:
   name               : "Yuan Zhou"
-  avatar             : "images/android-chrome-512x512.png" # 暂时保留默认，等以后有帅气的正装照或学术头像再替换文件
-  bio                : "Incoming Master's Student at Dalian University of Technology"
+  avatar             : "images/android-chrome-512x512.png"
+  bio                : "Major in Computer Science" # <-- 瘦身1：变成干净的一行身份标签
   location           : "Dalian, China"
-  employer           : "School of Computer Science and Technology, Dalian University of Technology"
+  employer           : 
   pubmed             : 
-  googlescholar      : # 极其冷酷地留空！没有就不填，防止网页上出现死链接
+  googlescholar      : 
   email              : "serenitymindwell@gmail.com"
   researchgate       : 
   uri                :
@@ -37,7 +37,7 @@ author:
   flickr             :
   facebook           :
   foursquare         :
-  github             : "Mindwells" # <-- 极其注意：如果你改了用户名，这里也要同步修改
+  github             : "Mindwells"
   google_plus        :
   keybase            :
   instagram          :
@@ -131,12 +131,12 @@ defaults:
 # Sass/SCSS
 sass:
   sass_dir: _sass
-  style: compressed # http://sass-lang.com/documentation/file.SASS_REFERENCE.html#output_style
+  style: compressed
 
 
 # Outputting
 permalink: /:categories/:title/
-timezone: Asia/Shanghai # http://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+timezone: Asia/Shanghai
 
 
 # Plugins
@@ -146,7 +146,6 @@ plugins:
   - jekyll-gist
   - jekyll-feed
   - jekyll-redirect-from
-# mimic GitHub Pages with --safe
 whitelist:
   - jekyll-paginate
   - jekyll-sitemap
@@ -156,7 +155,6 @@ whitelist:
 
 
 # HTML Compression
-# - http://jch.penibelst.de/
 compress_html:
   clippings: all
   ignore:
