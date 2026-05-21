@@ -7,7 +7,7 @@
 
 # Site Settings
 title                    : "Yuan Zhou | Homepage"
-description              : "Dalian University of Technology, School of Computer Science and Technology"
+description              : "Major in Computer Science"
 repository               : "Mindwells/Mindwells.github.io"
 google_scholar_stats_use_cdn : false
 
@@ -23,7 +23,7 @@ baidu_site_verification  :
 author:
   name               : "Yuan Zhou"
   avatar             : "images/android-chrome-512x512.png"
-  bio                : "Major in Computer Science" # <-- 瘦身1：变成干净的一行身份标签
+  bio                : "Dalian University of Technology, School of Computer Science and Technology" # <-- 瘦身1：变成干净的一行身份标签
   location           : "Dalian, China"
   employer           : 
   pubmed             : 
