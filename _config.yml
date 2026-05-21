@@ -8,7 +8,7 @@
 # Site Settings
 title                    : "Yuan Zhou | Homepage"
 description              : "Personal academic homepage of Yuan Zhou. Incoming Master's student at Dalian University of Technology, focusing on Natural Language Processing (NLP)."
-repository               : "Mindwells/mindwells.github.io" # <-- 极其注意：如果你改了GitHub用户名，请把这里替换为“新用户名/新用户名.github.io”
+repository               : "Mindwells/Mindwells.github.io" # <-- 极其注意：如果你改了GitHub用户名，请把这里替换为“新用户名/新用户名.github.io”
 google_scholar_stats_use_cdn : false # <-- 哈基米极其关键的微调：既然没有谷歌学术，将其关闭防止脚本报错
 
 # google analytics
