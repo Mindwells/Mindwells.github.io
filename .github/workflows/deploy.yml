@@ -37,6 +37,9 @@ jobs:
       - name: Check encoding
         run: npm run check:encoding
 
+      - name: Check icons
+        run: npm run check:icons
+
       - name: Build
         run: npm run build
         env:

@@ -11,11 +11,13 @@
     "check:encoding": "node tools/check-encoding.mjs",
     "check:claims": "node tools/check-copy-claims.mjs",
     "check:workflows": "node tools/check-workflows.mjs",
+    "check:icons": "node tools/check-icons.mjs",
     "serve": "node tools/serve.mjs",
     "audit": "node tools/measure.mjs",
     "selftest": "node tools/selftest.mjs",
     "copy": "node tools/copy-review.mjs",
-    "og": "node tools/og.mjs"
+    "og": "node tools/og.mjs",
+    "icons": "node tools/icons.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",

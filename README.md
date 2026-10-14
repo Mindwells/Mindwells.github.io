@@ -214,6 +214,32 @@ class rule added to a stylesheet loses to the component's own rule and the
 All twelve currently fire. Running it is how several blind checks and two
 false negatives in the audit itself were found.
 
+## Icons
+
+```bash
+npm run serve &
+msedge --headless=new --remote-debugging-port=9222 --user-data-dir=.audit/edge about:blank &
+npm run icons          # regenerates public/images/ icons from the design tokens
+npm run check:icons    # verifies them (no browser needed, runs in CI)
+```
+
+The icon set is generated, not hand-drawn: a monogram on an ink tile, rendered
+in headless Chrome so it uses the real Newsreader and reads its colours from
+`--ink` / `--paper`. Change the palette and the tab icon follows.
+
+Two details are deliberate. The mark is **responsive** — `Y` below 48px, `YZ`
+above — because two serif letters in a 16px tile are about five pixels wide
+each and read as a smudge. And the glyph is **fitted by measurement**, not by a
+guessed font-size ratio: serif advance widths are not predictable enough to
+eyeball.
+
+`check:icons` reads the file bytes and asserts each one is a valid PNG at its
+declared size, and that the `.ico` is structurally sound with PNG payloads
+whose real dimensions match the directory entries. That check exists because
+the generator once wrote a 1200x400 file named `favicon-16x16.png` — a
+measurement step inside the render loop was resetting the viewport. The file
+name is not evidence of the file's size.
+
 ## Social preview image
 
 `og:image` is generated from the live homepage rather than composited by hand,
