@@ -445,6 +445,38 @@ async function measurementScript() {
     scriptCount: document.querySelectorAll('script[src]').length,
   };
 
+  /* --- 10. Hero visualisation actually renders ---
+     A canvas can exist, be sized correctly, and still be blank — e.g. if the
+     drawing code throws on its first frame. Sample the pixels to prove the
+     signature animation is painting something. */
+  const canvasEl = document.querySelector('[data-viz-canvas]');
+  let viz = null;
+  if (canvasEl instanceof HTMLCanvasElement && canvasEl.width > 0 && canvasEl.height > 0) {
+    try {
+      const c2d = canvasEl.getContext('2d');
+      const { width: cw, height: ch } = canvasEl;
+      const pixels = c2d.getImageData(0, 0, cw, ch).data;
+      let painted = 0;
+      let sampled = 0;
+      // Sample every 40th pixel — enough to distinguish blank from drawn.
+      for (let i = 3; i < pixels.length; i += 4 * 40) {
+        sampled++;
+        if (pixels[i] > 8) painted++;
+      }
+      viz = {
+        width: cw,
+        height: ch,
+        sampled,
+        painted,
+        paintedRatio: Math.round((painted / Math.max(sampled, 1)) * 10000) / 10000,
+      };
+    } catch (error) {
+      viz = { error: String(error) };
+    }
+  } else {
+    viz = { error: 'canvas missing or zero-sized' };
+  }
+
   return {
     viewport: { width: viewportWidth, height: viewportHeight },
     documentWidth: document.documentElement.scrollWidth,
@@ -460,6 +492,7 @@ async function measurementScript() {
     performance: performance_,
     images,
     enhancement,
+    viz,
   };
 }
 
@@ -561,6 +594,9 @@ async function main() {
     if (data.performance.cls > 0.1) flags.push(`cls:${data.performance.cls}`);
     if (data.enhancement.stillInvisible > 0) {
       flags.push(`INVISIBLE-IN-VIEWPORT:${data.enhancement.invisibleSelectors.join('|')}`);
+    }
+    if (data.viz && (data.viz.error || data.viz.painted === 0)) {
+      flags.push(`VIZ:${data.viz.error ?? 'blank canvas'}`);
     }
     console.log(flags.length ? flags.join(' ') : 'clean');
   }
@@ -756,6 +792,11 @@ async function main() {
     console.log(
       `enhancement: ${sample.enhancement.inViewport} reveal targets in viewport, ${sample.enhancement.revealed}/${sample.enhancement.dataReveal} revealed overall, ${sample.enhancement.stillInvisible} invisible-in-viewport, themeToggles=${sample.enhancement.themeToggle}, copyButtons=${sample.enhancement.copyButtons}, scripts=${sample.enhancement.scriptCount}`,
     );
+    if (sample.viz) {
+      console.log(
+        `hero canvas: ${sample.viz.width}×${sample.viz.height} painted=${sample.viz.painted}/${sample.viz.sampled} (${((sample.viz.paintedRatio ?? 0) * 100).toFixed(1)}%)`,
+      );
+    }
     console.log(`headings: ${sample.headings.map((h) => `h${h.level}:${h.fontSize}`).join(' ')}`);
   }
   if (report.reducedMotion) {
