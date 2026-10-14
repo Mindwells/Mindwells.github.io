@@ -159,19 +159,37 @@ writes screenshots and a JSON report to `.audit/`.
 
 It checks: horizontal overflow, WCAG contrast (light and dark), tap-target
 sizes (hit-tested, so expanded hit areas count), reveal-animation wiring,
-sticky header behaviour, font loading, and cumulative layout shift — plus
-robustness passes for `prefers-reduced-motion`, JavaScript disabled, the theme
-toggle, and the mobile drawer.
+sticky header behaviour, font loading, cumulative layout shift, heading
+content edge alignment, and accessibility structure (landmarks, heading
+order, accessible names, duplicate ids, broken anchors, skip link).
+
+It also runs behavioural passes: `prefers-reduced-motion`, JavaScript
+disabled, the theme toggle, the mobile drawer, real Tab-key focus rings,
+long tasks during a full-page scroll, and proof the hero canvas pauses off
+screen and resumes on screen.
 
 ```bash
 npm run build
-node tools/serve.mjs &                       # serves dist/ on :4321
-msedge --headless=new --remote-debugging-port=9223 --user-data-dir=.audit/edge about:blank &
-node tools/measure.mjs                       # writes .audit/report.json + PNGs
+npm run serve &                              # serves dist/ on :4321
+msedge --headless=new --remote-debugging-port=9222 --user-data-dir=.audit/edge about:blank &
+npm run audit                                # writes .audit/report.json + PNGs
 ```
 
 CDP is driven over a WebSocket rather than by spawning the browser from Node,
 so it also works in environments that block piped child processes.
+
+## Social preview image
+
+`og:image` is generated from the live homepage rather than composited by hand,
+so the card can never drift from the real hero:
+
+```bash
+npm run serve &
+msedge --headless=new --remote-debugging-port=9222 --user-data-dir=.audit/edge about:blank &
+npm run og                                   # writes public/images/og.png
+```
+
+Re-run it after changing the hero, the name, or the type system.
 
 ---
 

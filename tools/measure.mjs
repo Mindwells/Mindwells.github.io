@@ -17,6 +17,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, resolve } from 'node:path';
+import { connect, findPageTarget, sleep } from './cdp.mjs';
 
 const PORT = process.env.PORT ?? '4321';
 const CDP_PORT = process.env.CDP_PORT ?? '9222';
@@ -34,70 +35,6 @@ const VIEWPORTS = [
   { name: 'desktop-1440', width: 1440, height: 900 },
   { name: 'wide-1920', width: 1920, height: 1080 },
 ];
-
-/* -------------------------------------------------------------------------- */
-/* CDP plumbing                                                               */
-/* -------------------------------------------------------------------------- */
-
-async function findPageTarget() {
-  const res = await fetch(`http://127.0.0.1:${CDP_PORT}/json/list`);
-  const targets = await res.json();
-  const page = targets.find((t) => t.type === 'page' && t.webSocketDebuggerUrl);
-  if (!page) throw new Error('No page target found. Is the browser running with --remote-debugging-port?');
-  return page;
-}
-
-function connect(url) {
-  const ws = new WebSocket(url);
-  let nextId = 1;
-  const pending = new Map();
-  const listeners = new Map();
-
-  ws.addEventListener('message', (event) => {
-    const msg = JSON.parse(event.data);
-    if (msg.id && pending.has(msg.id)) {
-      const { resolve: done, reject } = pending.get(msg.id);
-      pending.delete(msg.id);
-      if (msg.error) reject(new Error(`${msg.error.message} (${JSON.stringify(msg.error.data ?? '')})`));
-      else done(msg.result);
-      return;
-    }
-    if (msg.method && listeners.has(msg.method)) {
-      for (const fn of listeners.get(msg.method)) fn(msg.params);
-    }
-  });
-
-  const ready = new Promise((res, rej) => {
-    ws.addEventListener('open', res, { once: true });
-    ws.addEventListener('error', () => rej(new Error('CDP socket error')), { once: true });
-  });
-
-  return {
-    ready,
-    send(method, params = {}) {
-      const id = nextId++;
-      return new Promise((res, rej) => {
-        pending.set(id, { resolve: res, reject: rej });
-        ws.send(JSON.stringify({ id, method, params }));
-      });
-    },
-    once(method) {
-      return new Promise((res) => {
-        const fn = (params) => {
-          listeners.get(method).delete(fn);
-          res(params);
-        };
-        if (!listeners.has(method)) listeners.set(method, new Set());
-        listeners.get(method).add(fn);
-      });
-    },
-    close() {
-      ws.close();
-    },
-  };
-}
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /* -------------------------------------------------------------------------- */
 /* In-page measurement                                                        */
@@ -643,7 +580,7 @@ async function auditViewport(cdp, url, viewport, { theme = 'light', screenshot =
 async function main() {
   mkdirSync(outDir, { recursive: true });
 
-  const target = await findPageTarget();
+  const target = await findPageTarget(CDP_PORT);
   const cdp = connect(target.webSocketDebuggerUrl);
   await cdp.ready;
 
