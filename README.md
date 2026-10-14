@@ -160,13 +160,16 @@ writes screenshots and a JSON report to `.audit/`.
 It checks: horizontal overflow, WCAG contrast (light and dark), tap-target
 sizes (hit-tested, so expanded hit areas count), reveal-animation wiring,
 sticky header behaviour, font loading, cumulative layout shift, heading
-content edge alignment, and accessibility structure (landmarks, heading
-order, accessible names, duplicate ids, broken anchors, skip link).
+content edge alignment, reading measure (real characters per line, counted
+from line boxes), and accessibility structure (landmarks, heading order,
+accessible names, duplicate ids, broken anchors, skip link).
 
 It also runs behavioural passes: `prefers-reduced-motion`, JavaScript
 disabled, the theme toggle, the mobile drawer, real Tab-key focus rings,
-long tasks during a full-page scroll, and proof the hero canvas pauses off
-screen and resumes on screen.
+dispatched pointer hovers (so a dead hover state fails), anchor landing
+offsets versus the sticky header, long tasks during a full-page scroll,
+proof the hero canvas pauses off screen and resumes on screen, and print
+rendering under emulated print media.
 
 ```bash
 npm run build

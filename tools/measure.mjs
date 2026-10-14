@@ -500,6 +500,48 @@ async function measurementScript() {
     index: [...new Set(leftEdges('.section-header__index'))],
   };
 
+  /* --- 14. Reading measure ---
+     Characters per line is the most reliable predictor of whether prose is
+     comfortable to read, and a `max-width` in rem only approximates it. This
+     counts real line boxes instead of trusting the declared width.
+
+     Line count comes from the distinct `top` values of the range rects, not
+     from the rect count: a paragraph containing <strong> produces one rect
+     per inline fragment, which would otherwise inflate the line count. */
+  const measureBlocks = [];
+  for (const el of document.querySelectorAll('p, li, dd, blockquote')) {
+    const text = (el.textContent ?? '').trim();
+    if (text.length < 90) continue;
+    if (!isVisible(el)) continue;
+    // Skip containers: a list item wrapping a card holds several child blocks,
+    // so its text-to-line ratio says nothing about reading width.
+    if (el.querySelector('p, div, ul, ol, li, h1, h2, h3, h4, blockquote')) continue;
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0) continue;
+
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const rects = [...range.getClientRects()].filter((r) => r.width > 1 && r.height > 1);
+    if (rects.length === 0) continue;
+
+    const lines = new Set(rects.map((r) => Math.round(r.top))).size;
+    if (lines < 2) continue;
+
+    measureBlocks.push({
+      selector: describe(el),
+      width: Math.round(rect.width),
+      lines,
+      chars: text.length,
+      charsPerLine: Math.round(text.length / lines),
+      sample: text.slice(0, 38),
+    });
+  }
+  const readingMeasure = {
+    blocks: measureBlocks,
+    tooWide: measureBlocks.filter((b) => b.charsPerLine > 80),
+    tooNarrow: measureBlocks.filter((b) => b.charsPerLine < 30),
+  };
+
   return {
     viewport: { width: viewportWidth, height: viewportHeight },
     documentWidth: document.documentElement.scrollWidth,
@@ -519,6 +561,7 @@ async function measurementScript() {
     firstScreen,
     a11y,
     alignment,
+    readingMeasure,
   };
 }
 
@@ -632,6 +675,11 @@ async function main() {
       if (data.a11y.brokenAnchors.length) flags.push(`broken-anchors:${data.a11y.brokenAnchors.join(',')}`);
       if (data.a11y.imagesWithoutAlt) flags.push(`img-no-alt:${data.a11y.imagesWithoutAlt}`);
       if (data.a11y.landmarks.main !== 1) flags.push(`main-landmarks:${data.a11y.landmarks.main}`);
+    }
+    if (data.readingMeasure?.tooWide.length) {
+      flags.push(
+        `measure>80ch:${data.readingMeasure.tooWide.map((b) => `${b.selector}=${b.charsPerLine}`).join(',')}`,
+      );
     }
     console.log(flags.length ? flags.join(' ') : 'clean');
   }
@@ -968,6 +1016,123 @@ async function main() {
   }
   await cdp.send('Emulation.setEmulatedMedia', { media: '', features: [] });
 
+  /* --- 8. Hover micro-interactions actually fire ---
+     Hover styles are easy to write and easy to get wrong. This dispatches a
+     real pointer move over each control and compares the computed styles
+     before and after, so a dead hover state fails the audit. */
+  process.stdout.write('checking hover states … ');
+  await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+  await cdp.send('Emulation.setEmulatedMedia', { media: '', features: [] });
+  {
+    await navigate(cdp, BASE, 1200);
+
+    const readStyle = (selector, pseudo = null) =>
+      cdp
+        .send('Runtime.evaluate', {
+          expression: `(() => {
+            const el = document.querySelector(${JSON.stringify(selector)});
+            if (!el) return null;
+            const s = getComputedStyle(el${pseudo ? `, ${JSON.stringify(pseudo)}` : ''});
+            const r = el.getBoundingClientRect();
+            return {
+              color: s.color,
+              background: s.backgroundColor,
+              borderColor: s.borderColor,
+              transform: s.transform,
+              textDecorationColor: s.textDecorationColor,
+              opacity: s.opacity,
+              x: Math.round(r.left + r.width / 2),
+              y: Math.round(r.top + r.height / 2),
+            };
+          })()`,
+          returnByValue: true,
+        })
+        .then((r) => r.result.value);
+
+    const hover = async (x, y) => {
+      await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y, buttons: 0 });
+      await sleep(500);
+    };
+    const unhover = async () => {
+      await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 5, y: 400, buttons: 0 });
+      await sleep(350);
+    };
+
+    const targets = [
+      { name: 'nav link', selector: '[data-nav-link]', pseudo: '::after' },
+      { name: 'primary button', selector: '.button--primary', pseudo: null },
+      { name: 'theme toggle', selector: '[data-theme-toggle]', pseudo: '::after' },
+    ];
+
+    const results = [];
+    for (const t of targets) {
+      await unhover();
+      const before = await readStyle(t.selector, t.pseudo);
+      if (!before) {
+        results.push({ name: t.name, present: false });
+        continue;
+      }
+      await hover(before.x, before.y);
+      const after = await readStyle(t.selector, t.pseudo);
+      const changed = ['color', 'background', 'borderColor', 'transform', 'textDecorationColor', 'opacity'].filter(
+        (k) => before[k] !== after[k],
+      );
+      results.push({
+        name: t.name,
+        present: true,
+        changedProperties: changed,
+        responded: changed.length > 0,
+        before: { color: before.color, background: before.background, transform: before.transform },
+        after: { color: after.color, background: after.background, transform: after.transform },
+      });
+    }
+    await unhover();
+
+    report.hover = results;
+    const dead = results.filter((r) => r.present && !r.responded);
+    console.log(dead.length === 0 ? 'clean' : `DEAD:${dead.map((d) => d.name).join(',')}`);
+  }
+
+  /* --- 9. Anchor offsets ---
+     A sticky header is the classic way to hide the very content a nav link
+     points at. Each section must land clear of the header after navigating. */
+  process.stdout.write('checking anchor offsets … ');
+  {
+    await navigate(cdp, BASE, 1000);
+    const { result } = await cdp.send('Runtime.evaluate', {
+      expression: `(async () => {
+        document.documentElement.style.scrollBehavior = 'auto';
+        const header = document.querySelector('[data-header]');
+        const headerH = header ? header.getBoundingClientRect().height : 0;
+        const ids = [...document.querySelectorAll('section[id]')].map((s) => s.id);
+        const out = [];
+        for (const id of ids) {
+          location.hash = '#' + id;
+          await new Promise((r) => setTimeout(r, 220));
+          const el = document.getElementById(id);
+          if (!el) continue;
+          const top = el.getBoundingClientRect().top;
+          out.push({
+            id,
+            topAfterJump: Math.round(top),
+            headerHeight: Math.round(headerH),
+            // Allow a small tolerance for sub-pixel rounding.
+            clearsHeader: top >= headerH - 2,
+          });
+        }
+        history.replaceState(null, '', location.pathname + location.search);
+        document.documentElement.style.scrollBehavior = '';
+        window.scrollTo(0, 0);
+        return { headerHeight: Math.round(headerH), sections: out };
+      })()`,
+      returnByValue: true,
+      awaitPromise: true,
+    });
+    report.anchors = result.value;
+    const bad = result.value.sections.filter((s) => !s.clearsHeader);
+    console.log(bad.length === 0 ? 'clean' : `HIDDEN:${bad.map((b) => `${b.id}@${b.topAfterJump}`).join(',')}`);
+  }
+
   writeFileSync(join(outDir, 'report.json'), JSON.stringify(report, null, 2));
 
   /* --- Console summary --- */
@@ -1075,6 +1240,34 @@ async function main() {
     const p = report.print;
     console.log(
       `print: header=${p.headerVisible} viz=${p.vizVisible} buttons=${p.buttonsVisible} hiddenReveals=${p.hiddenReveals} bg=${p.bodyBg} color=${p.bodyColor} chars=${p.chars}`,
+    );
+  }
+  if (sample?.readingMeasure) {
+    const rm = sample.readingMeasure;
+    console.log(
+      `reading measure (desktop-1440): ${rm.blocks.length} prose blocks, ${rm.tooWide.length} over 80ch, ${rm.tooNarrow.length} under 30ch`,
+    );
+    for (const b of [...rm.blocks].sort((x, y) => y.charsPerLine - x.charsPerLine).slice(0, 5)) {
+      const flag = b.charsPerLine > 80 ? '  <-- TOO WIDE' : '';
+      console.log(
+        `  ${String(b.charsPerLine).padStart(3)} ch  ${String(b.width).padStart(4)}px  ${b.lines} lines  ${b.selector}${flag}`,
+      );
+    }
+  }
+  if (report.hover) {
+    console.log('hover states:');
+    for (const h of report.hover) {
+      console.log(
+        h.present === false
+          ? `  ${h.name}: not present`
+          : `  ${h.name}: ${h.responded ? `changed ${h.changedProperties.join(', ')}` : 'NO RESPONSE'}`,
+      );
+    }
+  }
+  if (report.anchors) {
+    const bad = report.anchors.sections.filter((s) => !s.clearsHeader);
+    console.log(
+      `anchors: ${report.anchors.sections.length} sections, header ${report.anchors.headerHeight}px, ${bad.length} landing under the header${bad.length ? ` -> ${bad.map((b) => b.id).join(', ')}` : ''}`,
     );
   }
 

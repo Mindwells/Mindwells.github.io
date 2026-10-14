@@ -101,7 +101,11 @@
 
   /* Layout */
   --measure: 34rem;          /* comfortable reading column ≈ 68ch at 1rem */
-  --measure-wide: 46rem;
+  /* Upper bound for prose that may sit beside other content. Capped at 40rem
+     (≈75ch) rather than something wider, because a wider cap is only safe
+     while the copy happens to be short — the first long paragraph would then
+     run past the point where reading gets tiring. */
+  --measure-wide: 40rem;
   --container: 78rem;
   --gutter: clamp(1.25rem, 0.75rem + 2.5vw, 3rem);
   --header-h: 4.25rem;
