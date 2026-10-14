@@ -17,6 +17,10 @@ const schoolNames = education.map((entry) => entry.abbr).join(' → ');
 
 <div class="about grid">
   <div class="about__prose col-main">
+    <!--
+      These paragraphs are the site owner's own bio, kept verbatim. The
+      layout can change freely; the wording is his.
+    -->
     <p class="about__lede">
       I am an incoming Master's student at the <strong>School of Computer Science and Technology,
       Dalian University of Technology (DUT)</strong>, where I am fortunate to be advised by
@@ -24,23 +28,17 @@ const schoolNames = education.map((entry) => entry.abbr).join(' → ');
     </p>
 
     <p class="about__text">
-      Before that I received my B.S. in Computer Science and Technology from the
+      Prior to that, I received my B.S. degree in Computer Science and Technology from the
       <strong>School of Computer Science and Artificial Intelligence, Wuhan University of Technology
-      (WUT)</strong>, graduating in 2026.
+      (WUT)</strong> in 2026.
     </p>
 
-    <p class="about__text">
-      My work sits in <strong>Natural Language Processing</strong>. What draws me to it is a narrow
-      question with wide consequences: when a model produces an answer, how do we know which part of
-      the input it actually used? That question is why I work on retrieval-augmented generation and
-      on the reasoning traces models produce — both are attempts to make a system's evidence
-      inspectable rather than implied.
-    </p>
+    <p class="about__text">My research interests lie in <strong>Natural Language Processing (NLP)</strong>, with a particular focus on:</p>
 
-    <p class="about__text">
-      I am at the beginning of this work and expect the specifics to change. What I care about
-      holding onto is the standard: a claim should come with the thing that supports it.
-    </p>
+    <ul class="about__interests">
+      <li>Retrieval-Augmented Generation (RAG)</li>
+      <li>Large Language Model Reasoning</li>
+    </ul>
   </div>
 
   <aside class="about__aside col-aside">
@@ -107,6 +105,35 @@ const schoolNames = education.map((entry) => entry.abbr).join(' → ');
   .about__text {
     color: var(--ink-muted);
     max-width: 36rem;
+  }
+
+  /* The stated focus areas, set as a plain list — the same two items the
+     original bio carried. */
+  .about__interests {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    max-width: 36rem;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+
+  .about__interests li {
+    position: relative;
+    padding-left: 1.35rem;
+    font-size: var(--step-0);
+    color: var(--ink);
+  }
+
+  .about__interests li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.72em;
+    width: 0.6rem;
+    height: 1px;
+    background: var(--accent);
   }
 
   /* --- Fact list --- */

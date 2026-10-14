@@ -1,17 +1,24 @@
 /**
  * Research focus areas.
  *
- * These drive the hero's retrieval visualisation *and* the About section, so
- * the animation is literally made of the research topics rather than being
- * decorative for its own sake.
+ * These drive the hero's retrieval visualisation *and* the Research section,
+ * so the animation is made of the actual research topics rather than being
+ * decorative.
+ *
+ * `token` is the compact form used inside the hero canvas, and is taken from
+ * the abbreviation in the owner's own bio.
+ *
+ * `blurb` deliberately describes the *field*, not the owner's own work — the
+ * bio states what he focuses on, and the site should not put opinions about
+ * his research in his mouth.
  */
 
 export interface ResearchArea {
   /** Short label — used as a token in the hero canvas. */
   token: string;
-  /** Full name, used in prose contexts. */
+  /** Full name, as written in the bio. */
   title: string;
-  /** One line on what the work actually involves. */
+  /** A neutral description of what the field covers. */
   blurb: string;
 }
 
@@ -20,13 +27,13 @@ export const researchAreas: ResearchArea[] = [
     token: 'RAG',
     title: 'Retrieval-Augmented Generation',
     blurb:
-      'Making retrieval decisions that a model can actually justify — chunking, ranking, and when to retrieve at all.',
+      'Grounding a model’s output in documents fetched at inference time, so the evidence behind an answer can be inspected rather than taken on trust.',
   },
   {
     token: 'LLM Reasoning',
     title: 'Large Language Model Reasoning',
     blurb:
-      'How models chain, verify, and abandon intermediate steps, and where that reasoning silently breaks down.',
+      'How large language models chain, verify, and abandon intermediate steps when solving a problem — and where those steps stop reflecting the answer.',
   },
 ];
 

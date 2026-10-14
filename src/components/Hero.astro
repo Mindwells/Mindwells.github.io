@@ -23,12 +23,18 @@ const secondaryLinks = activeLinks.filter((link) => link.icon !== 'mail').slice(
       <span class="hero__status-place">{profile.affiliation}</span>
     </p>
 
+    <!--
+      The headline is the research field itself, and the accent line is the
+      two focus areas — the site owner's own terms, not a rewritten slogan.
+      A title that quotes the person is more credible than one that performs
+      on their behalf.
+    -->
     <h1 class="hero__title">
       <span class="hero__title-line" data-reveal="up" data-reveal-delay="80">
-        Building language models that
+        {researchSummary}
       </span>
       <span class="hero__title-line hero__title-line--accent" data-reveal="up" data-reveal-delay="170">
-        <em>show their evidence</em>.
+        <em>{researchAreas.map((area) => area.title).join(' · ')}</em>
       </span>
     </h1>
 
@@ -166,7 +172,9 @@ const secondaryLinks = activeLinks.filter((link) => link.icon !== 'mail').slice(
     font-size: var(--step-7);
     line-height: 1.02;
     letter-spacing: -0.035em;
-    max-width: 22ch;
+    /* Sized in `ch` so the field name breaks onto a second line rather than
+       running past the measure at any viewport. */
+    max-width: 16ch;
     margin-bottom: clamp(2.5rem, 7vh, 4.5rem);
     text-wrap: balance;
   }
@@ -175,10 +183,19 @@ const secondaryLinks = activeLinks.filter((link) => link.icon !== 'mail').slice(
     display: block;
   }
 
-  /* A real selector can't wrap per-line, so the em is the accent carrier. */
-  .hero__title-line--accent em {
+  /* The focus-area line is a deck, not a second headline: it has its own
+     type scale so two long field names stay readable instead of wrapping
+     into a wall at display size. */
+  .hero__title-line--accent {
+    font-family: var(--font-serif);
     font-style: italic;
+    font-size: clamp(1.05rem, 0.85rem + 0.9vw, 1.6rem);
+    line-height: 1.4;
+    letter-spacing: var(--tracking-heading);
     color: var(--accent);
+    margin-top: clamp(1rem, 2.2vw, 1.9rem);
+    max-width: 34ch;
+    text-wrap: pretty;
   }
 
   /* --- Lower block --- */
@@ -352,6 +369,37 @@ const secondaryLinks = activeLinks.filter((link) => link.icon !== 'mail').slice(
 
     .hero__title {
       max-width: none;
+    }
+  }
+
+  /* Phones: the display size would push the primary action below the fold,
+     so the title steps down and the vertical rhythm tightens. The hero should
+     still state who this is and offer a way to make contact on first screen. */
+  @media (max-width: 640px) {
+    .hero {
+      padding-block: var(--space-2xl) var(--space-xl);
+    }
+
+    .hero__title {
+      font-size: clamp(2.4rem, 9vw, 3.25rem);
+      letter-spacing: -0.03em;
+      line-height: 1.06;
+      margin-bottom: var(--space-xl);
+    }
+
+    .hero__status {
+      margin-bottom: var(--space-lg);
+    }
+
+    /* The positioning sentence is long; dropping it a step and tightening
+       its leading keeps the actions on the first screen of a 360px phone. */
+    .hero__lede {
+      font-size: var(--step-0);
+      line-height: 1.55;
+    }
+
+    .hero__lower {
+      row-gap: var(--space-lg);
     }
   }
 

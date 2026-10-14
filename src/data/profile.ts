@@ -38,11 +38,17 @@ export const profile = {
   location: 'Dalian, China',
 
   /** One sentence. Doubles as the meta description. */
-  bio: 'Incoming M.S. student at Dalian University of Technology working on retrieval-augmented generation and large language model reasoning.',
+  bio: 'Incoming M.S. student at Dalian University of Technology, working on Natural Language Processing with a focus on retrieval-augmented generation and large language model reasoning.',
 
-  /** Longer positioning statement used in the About section. */
+  /**
+   * Positioning sentence shown under the hero title.
+   *
+   * This is the site owner's own wording, kept verbatim — the hero states
+   * where he is and what he works on, in his words rather than a rewritten
+   * marketing line.
+   */
   statement:
-    'I study how language models find, weigh, and reason over evidence — building systems that cite what they claim instead of guessing.',
+    "I am an incoming Master's student at the School of Computer Science and Technology, Dalian University of Technology (DUT), where I am fortunate to be advised by Assistant Professor Jihao Shi.",
 
   /**
    * Set `src` to a real photograph when available, e.g.

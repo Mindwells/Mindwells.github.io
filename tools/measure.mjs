@@ -477,6 +477,23 @@ async function measurementScript() {
     viz = { error: 'canvas missing or zero-sized' };
   }
 
+  /* --- 11. Above-the-fold content ---
+     A first screen should establish who this is and offer a way to act.
+     Rects are measured against the document, so they are scroll-independent. */
+  const scrollTop = window.scrollY;
+  const docTop = (el) => (el ? Math.round(el.getBoundingClientRect().top + scrollTop) : null);
+  const cta = document.querySelector('.button--primary');
+  const firstScreen = {
+    viewportHeight: window.innerHeight,
+    titleTop: docTop(document.querySelector('h1')),
+    titleBottom: (() => {
+      const el = document.querySelector('h1');
+      return el ? Math.round(el.getBoundingClientRect().bottom + scrollTop) : null;
+    })(),
+    ctaTop: docTop(cta),
+    ctaWithinFirstScreen: cta ? docTop(cta) < window.innerHeight : null,
+  };
+
   return {
     viewport: { width: viewportWidth, height: viewportHeight },
     documentWidth: document.documentElement.scrollWidth,
@@ -493,6 +510,7 @@ async function measurementScript() {
     images,
     enhancement,
     viz,
+    firstScreen,
   };
 }
 
@@ -757,6 +775,11 @@ async function main() {
     console.log(`\n${name}  doc=${data.documentWidth} vp=${data.viewport.width}  cls=${data.performance.cls}`);
     if (!issues.length) console.log('  clean');
     for (const issue of issues) console.log(issue);
+    if (data.firstScreen) {
+      const f = data.firstScreen;
+      const fold = f.ctaWithinFirstScreen === false ? '  <-- CTA BELOW FOLD' : '';
+      console.log(`  first screen: h1 ends ${f.titleBottom}px, CTA ${f.ctaTop}px / vp ${f.viewportHeight}px${fold}`);
+    }
 
     for (const item of data.horizontalOverflow.slice(0, 6)) {
       console.log(`    ↳ overflow ${item.selector} right=${item.right} (vp ${data.viewport.width})`);
