@@ -41,6 +41,12 @@ jobs:
         env:
           ASTRO_TELEMETRY_DISABLED: 1
 
+      - name: Check icons
+        run: npm run check:icons
+
+      - name: Check for dead CSS
+        run: npm run check:classes
+
       - name: Start static server
         run: |
           npm run serve &

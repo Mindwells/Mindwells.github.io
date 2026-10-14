@@ -572,6 +572,56 @@ export async function measurementScript(options = {}) {
     index: uniqueLefts([...document.querySelectorAll('.section-header__index')].map(textLeft)),
   };
 
+  /*
+   * Where the index sits relative to its heading.
+   *
+   * Checking only that the heading lands on the content edge says nothing
+   * about the index: it is satisfied by both the hanging layout and the
+   * stacked one.
+   *
+   * "Same row" is judged by vertical overlap, not by comparing tops. The two
+   * are baseline-aligned, so a small mono index against a large serif heading
+   * has tops that legitimately differ by ~20px — comparing tops would call the
+   * correct layout wrong.
+   */
+  const headerIndexRows = [...document.querySelectorAll('.section-header')]
+    .map((header) => {
+      const index = header.querySelector('.section-header__index');
+      const title = header.querySelector('.section-header__title');
+      if (!index || !title) return null;
+      const indexRect = index.getBoundingClientRect();
+      const titleRect = title.getBoundingClientRect();
+      const overlap = Math.max(
+        0,
+        Math.min(indexRect.bottom, titleRect.bottom) - Math.max(indexRect.top, titleRect.top),
+      );
+      return {
+        id: title.id || title.textContent?.trim().slice(0, 20),
+        overlapFraction: indexRect.height ? Math.round((overlap / indexRect.height) * 100) / 100 : 0,
+        sameRow: indexRect.height > 0 && overlap > indexRect.height * 0.5,
+        indexOutdented: indexRect.left < titleRect.left - 4,
+      };
+    })
+    .filter(Boolean);
+
+  const sameRowCount = headerIndexRows.filter((h) => h.sameRow).length;
+  const hangOutdented = headerIndexRows.filter((h) => h.sameRow && h.indexOutdented).length;
+  const indexLayout = {
+    // CSS media queries measure the viewport *including* the scrollbar, which
+    // is `innerWidth`. Comparing against `clientWidth` put this check and the
+    // stylesheet on opposite sides of the 1120px boundary.
+    wideViewport: window.innerWidth >= 1120,
+    headers: headerIndexRows.length,
+    sameRow: sameRowCount,
+    hanging: hangOutdented,
+    // Wide screens expect the index beside the heading and outdented; narrow
+    // screens expect it stacked above, which is also "not the same row".
+    correct:
+      window.innerWidth >= 1120
+        ? sameRowCount === headerIndexRows.length && hangOutdented === headerIndexRows.length
+        : sameRowCount === 0,
+  };
+
   /* --- 14. Reading measure ---
      Characters per line is the most reliable predictor of whether prose is
      comfortable to read, and a `max-width` in rem only approximates it. This
@@ -690,6 +740,7 @@ export async function measurementScript(options = {}) {
     alignment,
     readingMeasure,
     layoutDefects,
+    indexLayout,
   };
 }
 
@@ -837,6 +888,12 @@ async function main() {
       flags.push(`CLIPPED:${data.layoutDefects.clipped.map((c) => c.selector).join(',')}`);
     }
     if (data.layoutDefects?.overlapCount) flags.push(`OVERLAP:${data.layoutDefects.overlapCount}`);
+    if (data.indexLayout && !data.indexLayout.correct) {
+      const expected = data.indexLayout.wideViewport ? 'hanging beside the heading' : 'stacked above it';
+      flags.push(
+        `INDEX-LAYOUT:expected ${expected}, got ${data.indexLayout.sameRow}/${data.indexLayout.headers} on the same row`,
+      );
+    }
     return flags;
   };
 
@@ -1733,7 +1790,13 @@ async function main() {
     const aligned =
       a.title.length === 1 && a.containerContent.length === 1 && a.title[0] === a.containerContent[0];
     console.log(
-      `alignment: container=${a.container.join(',')} contentEdge=${a.containerContent.join(',')} index=${a.index.join(',')} title=${a.title.join(',')}  ${aligned ? '(headings sit on the content edge, index hangs outside)' : '<-- HEADING/CONTENT EDGE MISMATCH'}`,
+      `alignment: container=${a.container.join(',')} contentEdge=${a.containerContent.join(',')} index=${a.index.join(',')} title=${a.title.join(',')}  ${aligned ? '(headings sit on the content edge)' : '<-- HEADING/CONTENT EDGE MISMATCH'}`,
+    );
+  }
+  if (sample?.indexLayout) {
+    const i = sample.indexLayout;
+    console.log(
+      `section index: at ${i.wideViewport ? 'wide' : 'narrow'} width, ${i.sameRow}/${i.headers} indices share the heading's row, ${i.hanging} outdented  ${i.correct ? '(as intended)' : '<-- WRONG LAYOUT'}`,
     );
   }
   if (report.print) {

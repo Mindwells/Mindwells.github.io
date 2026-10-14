@@ -214,6 +214,23 @@ class rule added to a stylesheet loses to the component's own rule and the
 All twelve currently fire. Running it is how several blind checks and two
 false negatives in the audit itself were found.
 
+## Dead CSS and unstyled classes
+
+```bash
+npm run build && npm run check:classes
+```
+
+Compares the classes in the built CSS against those the project references, in
+the built HTML *and* in the source templates. Reports rules that nothing uses
+(fails) and classes with no rule (informational — usually a deliberate
+semantic hook, but also what a typo looks like).
+
+Three things make a naive built-HTML comparison wrong, and the tool handles
+all three: Astro inlines small stylesheets into the HTML; hashed font
+filenames inside `url(...)` look like class selectors; and sections with no
+entries never render their component markup, so those components' classes
+would appear unused when they are not.
+
 ## Icons
 
 ```bash

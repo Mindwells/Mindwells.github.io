@@ -12,6 +12,7 @@
     "check:claims": "node tools/check-copy-claims.mjs",
     "check:workflows": "node tools/check-workflows.mjs",
     "check:icons": "node tools/check-icons.mjs",
+    "check:classes": "node tools/check-classes.mjs",
     "serve": "node tools/serve.mjs",
     "audit": "node tools/measure.mjs",
     "selftest": "node tools/selftest.mjs",

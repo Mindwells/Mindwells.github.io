@@ -11,10 +11,12 @@
  * the width where a hanging index would crowd the viewport, the index sits on
  * its own line above the heading — still leaving heading and content aligned.
  *
- * The index is baseline-aligned with the heading by placing both in the same
- * grid area and letting the row's baseline alignment do the work, rather than
- * faking it with a hand-tuned `top` that would drift whenever the type scale
- * changes.
+ * The index and the heading must be *siblings* for the hanging layout to work:
+ * they share a grid area, and the row's baseline alignment puts the index on
+ * the heading's first baseline at any type size. An earlier version nested the
+ * heading inside a body wrapper, so the grid placement silently applied to an
+ * element that was not a grid item and the index sat on its own row at every
+ * width — the stacked layout, wearing the hanging layout's clothes.
  */
 export interface Props {
   /** Two-digit section index, e.g. "01". */
@@ -30,10 +32,8 @@ const { index, title, lede, id } = Astro.props;
 
 <header class="section-header" data-reveal="up">
   <span class="section-header__index" aria-hidden="true">{index}</span>
-  <div class="section-header__body">
-    <h2 class="section-header__title" id={id ? `${id}-title` : undefined}>{title}</h2>
-    {lede && <p class="section-header__lede">{lede}</p>}
-  </div>
+  <h2 class="section-header__title" id={id ? `${id}-title` : undefined}>{title}</h2>
+  {lede && <p class="section-header__lede">{lede}</p>}
 </header>
 
 <style>
@@ -43,6 +43,7 @@ const { index, title, lede, id } = Astro.props;
     margin-bottom: var(--space-2xl);
   }
 
+  /* Stacked by default: the index sits on its own line above the heading. */
   .section-header__index {
     display: block;
     font-family: var(--font-mono);
@@ -66,11 +67,11 @@ const { index, title, lede, id } = Astro.props;
   }
 
   /*
-    Wide viewports: hang the index into the margin.
-
-    Both the index and the heading occupy the same grid area, so the heading
-    still starts at the content edge. `align-items: baseline` on the shared row
-    puts the index on the heading's first baseline exactly, at any type size.
+    Wide viewports: index and heading occupy the *same* grid area, so the
+    heading still starts at the content edge and the index hangs outside it.
+    `align-self: baseline` on the shared row puts the index on the heading's
+    first baseline exactly, rather than at a hand-tuned offset that would drift
+    with the type scale.
   */
   @media (min-width: 1120px) {
     .section-header__index,

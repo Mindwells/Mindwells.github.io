@@ -13,10 +13,6 @@
   padding-inline: var(--gutter);
 }
 
-.container--narrow {
-  max-width: 56rem;
-}
-
 /* --- Section rhythm ----------------------------------------------------- */
 
 .section {
