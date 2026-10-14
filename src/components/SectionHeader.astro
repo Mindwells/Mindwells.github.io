@@ -1,0 +1,87 @@
+---
+/**
+ * Section header.
+ *
+ * The recurring editorial device: a mono-labelled index in the left margin,
+ * the display heading, and an optional aside. Using the same skeleton for
+ * every section is what makes the page read as *designed* rather than
+ * assembled.
+ */
+export interface Props {
+  /** Two-digit section index, e.g. "01". */
+  index: string;
+  title: string;
+  /** Optional supporting line under the title. */
+  lede?: string;
+  id?: string;
+}
+
+const { index, title, lede, id } = Astro.props;
+---
+
+<header class="section-header" data-reveal="up">
+  <span class="section-header__index" aria-hidden="true">{index}</span>
+  <div class="section-header__body">
+    <h2 class="section-header__title" id={id ? `${id}-title` : undefined}>{title}</h2>
+    {lede && <p class="section-header__lede">{lede}</p>}
+  </div>
+</header>
+
+<style>
+  .section-header {
+    display: grid;
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+    align-items: start;
+    column-gap: var(--space-md);
+    margin-bottom: var(--space-2xl);
+  }
+
+  .section-header__index {
+    font-family: var(--font-mono);
+    font-size: var(--step--2);
+    letter-spacing: var(--tracking-meta);
+    color: var(--accent);
+    padding-top: 0.85em;
+    font-variant-numeric: tabular-nums;
+    position: relative;
+  }
+
+  /* A hairline connecting the index to the heading — a small piece of
+     structure that ties the label to its content at any viewport width. */
+  .section-header__index::after {
+    content: '';
+    position: absolute;
+    top: 0.85em;
+    left: 2.6rem;
+    width: 1.4rem;
+    height: 1px;
+    background: var(--rule-strong);
+  }
+
+  .section-header__title {
+    font-size: var(--step-4);
+    margin: 0;
+  }
+
+  .section-header__lede {
+    margin-top: var(--space-sm);
+    color: var(--ink-muted);
+    font-size: var(--step-0);
+    max-width: var(--measure);
+  }
+
+  @media (max-width: 640px) {
+    .section-header {
+      grid-template-columns: minmax(0, 1fr);
+      row-gap: var(--space-2xs);
+    }
+
+    .section-header__index {
+      padding-top: 0;
+    }
+
+    .section-header__index::after {
+      display: none;
+    }
+  }
+</style>

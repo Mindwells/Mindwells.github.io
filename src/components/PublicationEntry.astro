@@ -1,0 +1,252 @@
+---
+import Icon from './ui/Icon.astro';
+
+/**
+ * Publication entry.
+ *
+ * Author list handling is the detail that matters here: the site owner's own
+ * name is emphasised and everyone else is muted, so a reader scanning five
+ * author lists immediately sees where this person sits in each one.
+ */
+export interface Props {
+  title: string;
+  authors: string[];
+  selfIndex?: number;
+  venue: string;
+  year: number;
+  type?: 'conference' | 'journal' | 'preprint' | 'workshop';
+  abbr?: string;
+  abstract?: string;
+  links?: { label: string; href: string }[];
+  thumbnail?: string;
+  featured?: boolean;
+  index?: number;
+}
+
+const {
+  title,
+  authors,
+  selfIndex = 0,
+  venue,
+  year,
+  type = 'conference',
+  abbr,
+  abstract,
+  links = [],
+  thumbnail,
+  featured = false,
+  index = 0,
+} = Astro.props;
+
+const typeLabels: Record<string, string> = {
+  conference: 'Conference',
+  journal: 'Journal',
+  preprint: 'Preprint',
+  workshop: 'Workshop',
+};
+---
+
+<article
+  class:list={['pub', { 'pub--featured': featured }]}
+  data-reveal="up"
+  data-reveal-delay={Math.min(index, 5) * 80}
+>
+  {
+    thumbnail && (
+      <div class="pub__figure">
+        <img src={thumbnail} alt="" loading="lazy" decoding="async" width="480" height="300" />
+      </div>
+    )
+  }
+
+  <div class="pub__body">
+    <div class="pub__meta">
+      <span class="pub__venue-badge mono">{abbr ?? typeLabels[type]}</span>
+      <span class="pub__year mono">{year}</span>
+      {featured && <span class="pub__featured mono">Featured</span>}
+    </div>
+
+    <h3 class="pub__title">{title}</h3>
+
+    <p class="pub__authors">
+      {
+        authors.map((author, i) => (
+          <>
+            {i > 0 && <span class="pub__sep">, </span>}
+            <span class:list={['pub__author', { 'pub__author--self': i === selfIndex }]}>{author}</span>
+          </>
+        ))
+      }
+    </p>
+
+    <p class="pub__venue">{venue}</p>
+
+    {abstract && <p class="pub__abstract">{abstract}</p>}
+
+    {
+      links.length > 0 && (
+        <ul class="pub__links">
+          {links.map((link) => (
+            <li>
+              <a class="pub__link" href={link.href} target="_blank" rel="noopener noreferrer">
+                <Icon name="externalLink" size={13} />
+                <span>{link.label}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </div>
+</article>
+
+<style>
+  .pub {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-md);
+    padding-block: var(--space-xl);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .pub:first-child {
+    border-top: 1px solid var(--rule);
+  }
+
+  .pub--featured {
+    position: relative;
+  }
+
+  /* A thin accent edge marks featured work without a heavy badge. */
+  .pub--featured::before {
+    content: '';
+    position: absolute;
+    left: calc(var(--space-sm) * -1);
+    top: var(--space-xl);
+    bottom: var(--space-xl);
+    width: 2px;
+    background: var(--accent);
+    border-radius: var(--radius-full);
+  }
+
+  @media (min-width: 860px) {
+    .pub:has(.pub__figure) {
+      grid-template-columns: 15rem minmax(0, 1fr);
+      gap: var(--space-xl);
+    }
+  }
+
+  .pub__figure {
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--paper-raised);
+    align-self: start;
+  }
+
+  .pub__figure img {
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+  }
+
+  .pub__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: var(--space-xs);
+  }
+
+  .pub__venue-badge {
+    color: var(--accent);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    background: var(--accent-wash);
+    border-radius: var(--radius-sm);
+    padding: 0.08rem 0.4rem;
+    font-size: var(--step--2);
+    letter-spacing: var(--tracking-meta);
+    text-transform: uppercase;
+  }
+
+  .pub__year,
+  .pub__featured {
+    color: var(--ink-subtle);
+    font-size: var(--step--2);
+    letter-spacing: var(--tracking-meta);
+    text-transform: uppercase;
+  }
+
+  .pub__title {
+    font-size: var(--step-2);
+    line-height: var(--leading-snug);
+    margin: 0 0 var(--space-xs);
+  }
+
+  .pub__authors {
+    color: var(--ink-muted);
+    font-size: var(--step--1);
+    max-width: 46rem;
+    margin: 0;
+  }
+
+  .pub__author--self {
+    color: var(--ink);
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent);
+    text-underline-offset: 0.2em;
+  }
+
+  .pub__venue {
+    margin-top: 0.3rem;
+    color: var(--ink-subtle);
+    font-size: var(--step--1);
+    font-style: italic;
+    max-width: 46rem;
+  }
+
+  .pub__abstract {
+    margin-top: var(--space-sm);
+    color: var(--ink-muted);
+    font-size: var(--step--1);
+    line-height: 1.65;
+    max-width: 46rem;
+  }
+
+  .pub__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    list-style: none;
+    margin: var(--space-sm) 0 0;
+    padding: 0;
+  }
+
+  .pub__links li + li {
+    margin-top: 0;
+  }
+
+  .pub__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.65rem;
+    min-height: 32px;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-full);
+    font-size: var(--step--2);
+    letter-spacing: 0.02em;
+    color: var(--ink-muted);
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out);
+  }
+
+  .pub__link:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-wash);
+  }
+</style>

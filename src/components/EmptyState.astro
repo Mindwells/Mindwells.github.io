@@ -1,0 +1,50 @@
+---
+import Icon from './ui/Icon.astro';
+
+/**
+ * Empty-state wrapper for sections without content yet.
+ *
+ * Rather than showing a placeholder card ("No publications yet" — which reads
+ * as unfinished), the section states what will live there in the owner's own
+ * voice. It is honest, it keeps the page's rhythm intact, and it disappears
+ * the moment a first entry is added.
+ */
+export interface Props {
+  /** What the section will hold, written as a sentence. */
+  message: string;
+  icon?: string;
+}
+
+const { message, icon = 'book' } = Astro.props;
+---
+
+<div class="empty" data-reveal="up">
+  <span class="empty__icon" aria-hidden="true"><Icon name={icon} size={18} /></span>
+  <p class="empty__text">{message}</p>
+</div>
+
+<style>
+  .empty {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-lg) var(--space-md);
+    border: 1px dashed var(--rule-strong);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--paper-sunken) 45%, transparent);
+  }
+
+  .empty__icon {
+    display: grid;
+    place-items: center;
+    color: var(--ink-subtle);
+    flex-shrink: 0;
+  }
+
+  .empty__text {
+    color: var(--ink-muted);
+    font-size: var(--step--1);
+    max-width: 44rem;
+    margin: 0;
+  }
+</style>

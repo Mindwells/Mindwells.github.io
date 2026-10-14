@@ -1,0 +1,175 @@
+---
+import Icon from './ui/Icon.astro';
+import { profile, activeLinks } from '../data/profile';
+import { education } from '../data/education';
+
+/**
+ * About section.
+ *
+ * The prose is the same information the original site carried, rewritten as
+ * an editorial lede. A small "at a glance" definition list carries the facts
+ * that don't belong in a sentence.
+ */
+
+const emailLink = activeLinks.find((link) => link.icon === 'mail');
+const schoolNames = education.map((entry) => entry.abbr).join(' → ');
+---
+
+<div class="about grid">
+  <div class="about__prose col-main">
+    <p class="about__lede">
+      I am an incoming Master's student at the <strong>School of Computer Science and Technology,
+      Dalian University of Technology (DUT)</strong>, where I am fortunate to be advised by
+      <strong>Assistant Professor Jihao Shi</strong>.
+    </p>
+
+    <p class="about__text">
+      Before that I received my B.S. in Computer Science and Technology from the
+      <strong>School of Computer Science and Artificial Intelligence, Wuhan University of Technology
+      (WUT)</strong>, graduating in 2026.
+    </p>
+
+    <p class="about__text">
+      My work sits in <strong>Natural Language Processing</strong>. What draws me to it is a narrow
+      question with wide consequences: when a model produces an answer, how do we know which part of
+      the input it actually used? That question is why I work on retrieval-augmented generation and
+      on the reasoning traces models produce — both are attempts to make a system's evidence
+      inspectable rather than implied.
+    </p>
+
+    <p class="about__text">
+      I am at the beginning of this work and expect the specifics to change. What I care about
+      holding onto is the standard: a claim should come with the thing that supports it.
+    </p>
+  </div>
+
+  <aside class="about__aside col-aside">
+    <dl class="facts">
+      <div class="facts__row">
+        <dt class="facts__term">Position</dt>
+        <dd class="facts__value">{profile.role}</dd>
+      </div>
+      <div class="facts__row">
+        <dt class="facts__term">Affiliation</dt>
+        <dd class="facts__value">{profile.affiliation}</dd>
+      </div>
+      <div class="facts__row">
+        <dt class="facts__term">Focus</dt>
+        <dd class="facts__value">NLP · RAG · LLM Reasoning</dd>
+      </div>
+      <div class="facts__row">
+        <dt class="facts__term">Education</dt>
+        <dd class="facts__value">{schoolNames}</dd>
+      </div>
+      <div class="facts__row">
+        <dt class="facts__term">Based in</dt>
+        <dd class="facts__value">{profile.location}</dd>
+      </div>
+      {
+        emailLink?.handle && (
+          <div class="facts__row">
+            <dt class="facts__term">Email</dt>
+            <dd class="facts__value">
+              <a href={emailLink.href} class="facts__link">
+                {emailLink.handle}
+                <Icon name="arrowUpRight" size={12} />
+              </a>
+            </dd>
+          </div>
+        )
+      }
+    </dl>
+  </aside>
+</div>
+
+<style>
+  .about__prose {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  /* The opening paragraph gets slightly larger type and a drop-cap-like
+     weight shift, which is what signals "start reading here". */
+  .about__lede {
+    font-family: var(--font-serif);
+    font-size: var(--step-2);
+    line-height: 1.45;
+    letter-spacing: var(--tracking-heading);
+    color: var(--ink);
+    max-width: 36rem;
+  }
+
+  .about__lede strong {
+    font-weight: 600;
+  }
+
+  .about__text {
+    color: var(--ink-muted);
+    max-width: 36rem;
+  }
+
+  /* --- Fact list --- */
+
+  .facts {
+    margin: 0;
+    border-top: 1px solid var(--rule);
+    /* Sticks alongside the prose on tall viewports, which keeps the aside
+       useful instead of stranding it at the top of a long column. */
+    position: sticky;
+    top: calc(var(--header-h) + var(--space-lg));
+  }
+
+  .facts__row {
+    display: grid;
+    grid-template-columns: minmax(0, 6.5rem) minmax(0, 1fr);
+    gap: var(--space-sm);
+    padding-block: 0.75rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .facts__term {
+    font-family: var(--font-mono);
+    font-size: var(--step--2);
+    letter-spacing: var(--tracking-meta);
+    text-transform: uppercase;
+    color: var(--ink-subtle);
+    padding-top: 0.12em;
+  }
+
+  .facts__value {
+    margin: 0;
+    font-size: var(--step--1);
+    color: var(--ink);
+    line-height: 1.55;
+  }
+
+  .facts__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--accent);
+    word-break: break-all;
+  }
+
+  .facts__link :global(svg) {
+    flex-shrink: 0;
+    opacity: 0.6;
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+
+  .facts__link:hover :global(svg) {
+    transform: translate(2px, -2px);
+    opacity: 1;
+  }
+
+  @media (max-width: 900px) {
+    .facts {
+      position: static;
+    }
+
+    .facts__row {
+      grid-template-columns: minmax(0, 7rem) minmax(0, 1fr);
+    }
+  }
+</style>

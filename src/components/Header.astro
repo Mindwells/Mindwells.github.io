@@ -1,0 +1,479 @@
+---
+import Icon from './ui/Icon.astro';
+import { profile } from '../data/profile';
+
+/**
+ * Sticky header.
+ *
+ * Two states: transparent over the hero, then condensed with a hairline rule
+ * and a backdrop blur once the hero scrolls away. The nav sits right-aligned
+ * with a mono index so it echoes the section headers rather than looking like
+ * a separate widget.
+ */
+
+const sections = [
+  { id: 'about', label: 'About', index: '01' },
+  { id: 'research', label: 'Research', index: '02' },
+  { id: 'news', label: 'News', index: '03' },
+  { id: 'publications', label: 'Publications', index: '04' },
+  { id: 'awards', label: 'Awards', index: '05' },
+  { id: 'education', label: 'Education', index: '06' },
+  { id: 'experience', label: 'Experience', index: '07' },
+  { id: 'contact', label: 'Contact', index: '08' },
+];
+
+const navSections = sections;
+---
+
+<header class="header" data-header>
+  <div class="header__inner container">
+    <a class="header__brand" href="#top" aria-label={`${profile.name} — back to top`}>
+      <span class="header__monogram" aria-hidden="true">{profile.initials}</span>
+      <span class="header__name">{profile.name}</span>
+    </a>
+
+    <nav class="header__nav" aria-label="Sections">
+      <ul class="header__list">
+        {
+          navSections.map((section) => (
+            <li>
+              <a class="header__link" href={`#${section.id}`} data-nav-link>
+                <span class="header__link-index" aria-hidden="true">{section.index}</span>
+                <span class="header__link-label">{section.label}</span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <div class="header__actions">
+      <button class="header__icon-button" type="button" data-theme-toggle aria-pressed="false">
+        <span class="header__icon header__icon--sun"><Icon name="sun" size={17} /></span>
+        <span class="header__icon header__icon--moon"><Icon name="moon" size={17} /></span>
+      </button>
+
+      <button
+        class="header__icon-button header__menu-button"
+        type="button"
+        data-menu-toggle
+        aria-expanded="false"
+        aria-controls="mobile-nav"
+        aria-label="Open section menu"
+      >
+        <span class="header__icon header__icon--menu"><Icon name="menu" size={18} /></span>
+        <span class="header__icon header__icon--close"><Icon name="close" size={18} /></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- Mobile drawer -->
+<div class="drawer" id="mobile-nav" data-drawer hidden>
+  <nav class="drawer__nav" aria-label="Sections">
+    <ul class="drawer__list">
+      {
+        navSections.map((section, i) => (
+          <li class="drawer__item" style={`--i:${i}`}>
+            <a class="drawer__link" href={`#${section.id}`} data-drawer-link>
+              <span class="drawer__index" aria-hidden="true">{section.index}</span>
+              <span class="drawer__label">{section.label}</span>
+              <span class="drawer__arrow" aria-hidden="true">
+                <Icon name="arrowRight" size={16} />
+              </span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </nav>
+</div>
+
+<style>
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-header);
+    --header-border: transparent;
+    --header-bg: transparent;
+    border-bottom: 1px solid var(--header-border);
+    transition:
+      background-color var(--dur-base) var(--ease-out),
+      border-color var(--dur-base) var(--ease-out),
+      backdrop-filter var(--dur-base) var(--ease-out);
+  }
+
+  .header.is-condensed {
+    --header-border: var(--rule);
+    --header-bg: color-mix(in srgb, var(--paper) 82%, transparent);
+    backdrop-filter: saturate(180%) blur(14px);
+    -webkit-backdrop-filter: saturate(180%) blur(14px);
+  }
+
+  .header__inner {
+    height: var(--header-h);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+  }
+
+  /* --- Brand --- */
+
+  .header__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: var(--ink);
+    font-weight: 500;
+    letter-spacing: var(--tracking-body);
+    flex-shrink: 0;
+  }
+
+  .header__brand:hover {
+    color: var(--ink);
+  }
+
+  .header__monogram {
+    display: grid;
+    place-items: center;
+    width: 1.85rem;
+    height: 1.85rem;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-full);
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.04em;
+    color: var(--ink-muted);
+    transition:
+      border-color var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out),
+      transform var(--dur-base) var(--ease-spring);
+  }
+
+  .header__brand:hover .header__monogram {
+    border-color: var(--accent);
+    color: var(--accent);
+    transform: rotate(-8deg);
+  }
+
+  .header__name {
+    font-size: var(--step--1);
+    white-space: nowrap;
+  }
+
+  /* --- Nav --- */
+
+  .header__list {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .header__list li + li {
+    margin-top: 0;
+  }
+
+  .header__link {
+    position: relative;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.32rem;
+    padding: 0.45rem 0.6rem;
+    font-size: var(--step--1);
+    color: var(--ink-muted);
+    border-radius: var(--radius-sm);
+    transition: color var(--dur-fast) var(--ease-out);
+    white-space: nowrap;
+  }
+
+  .header__link-index {
+    font-family: var(--font-mono);
+    font-size: 0.56rem;
+    letter-spacing: 0.06em;
+    color: var(--ink-subtle);
+    opacity: 0.7;
+    transition: opacity var(--dur-fast) var(--ease-out);
+  }
+
+  /* Underline sweep: grows from the left on hover, stays put when active. */
+  .header__link::after {
+    content: '';
+    position: absolute;
+    left: 0.6rem;
+    right: 0.6rem;
+    bottom: 0.22rem;
+    height: 1px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+
+  .header__link:hover {
+    color: var(--ink);
+  }
+
+  .header__link:hover::after {
+    transform: scaleX(1);
+  }
+
+  .header__link.is-active {
+    color: var(--accent);
+  }
+
+  .header__link.is-active .header__link-index {
+    opacity: 1;
+    color: var(--accent);
+  }
+
+  .header__link.is-active::after {
+    transform: scaleX(1);
+    background: var(--accent);
+  }
+
+  /* --- Actions --- */
+
+  .header__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+  }
+
+  .header__icon-button {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--ink-muted);
+    cursor: pointer;
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out);
+  }
+
+  .header__icon-button:hover {
+    color: var(--ink);
+    border-color: var(--rule-strong);
+  }
+
+  .header__icon {
+    grid-area: 1 / 1;
+    display: grid;
+    place-items: center;
+    transition:
+      opacity var(--dur-base) var(--ease-out),
+      transform var(--dur-base) var(--ease-out);
+  }
+
+  /* Theme button shows one icon at a time. */
+  .header__icon--moon {
+    opacity: 0;
+    transform: rotate(-40deg) scale(0.7);
+  }
+
+  :global(:root[data-theme='dark']) .header__icon--sun {
+    opacity: 0;
+    transform: rotate(40deg) scale(0.7);
+  }
+
+  :global(:root[data-theme='dark']) .header__icon--moon {
+    opacity: 1;
+    transform: none;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme='light'])) .header__icon--sun {
+      opacity: 0;
+      transform: rotate(40deg) scale(0.7);
+    }
+
+    :global(:root:not([data-theme='light'])) .header__icon--moon {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .header__menu-button {
+    display: none;
+  }
+
+  .header__icon--close {
+    opacity: 0;
+    transform: rotate(-40deg) scale(0.7);
+  }
+
+  .header__menu-button[aria-expanded='true'] .header__icon--menu {
+    opacity: 0;
+    transform: rotate(40deg) scale(0.7);
+  }
+
+  .header__menu-button[aria-expanded='true'] .header__icon--close {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* --- Responsive --- */
+
+  @media (max-width: 1080px) {
+    .header__nav {
+      display: none;
+    }
+
+    .header__menu-button {
+      display: grid;
+    }
+  }
+
+  /* --- Mobile drawer --- */
+
+  .drawer {
+    position: fixed;
+    inset: var(--header-h) 0 0;
+    z-index: var(--z-overlay);
+    background: var(--paper);
+    border-top: 1px solid var(--rule);
+    padding: var(--space-lg) var(--gutter) var(--space-2xl);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .drawer[hidden] {
+    display: none;
+  }
+
+  .drawer__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .drawer__item + .drawer__item {
+    margin-top: 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .drawer__link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: 1.05rem 0.25rem;
+    color: var(--ink);
+    font-family: var(--font-serif);
+    font-size: var(--step-2);
+    letter-spacing: var(--tracking-heading);
+  }
+
+  .drawer__index {
+    font-family: var(--font-mono);
+    font-size: var(--step--2);
+    letter-spacing: var(--tracking-meta);
+    color: var(--ink-subtle);
+    width: 1.9rem;
+    flex-shrink: 0;
+  }
+
+  .drawer__label {
+    flex: 1;
+  }
+
+  .drawer__arrow {
+    color: var(--ink-subtle);
+    opacity: 0;
+    transform: translateX(-0.5rem);
+    transition:
+      opacity var(--dur-fast) var(--ease-out),
+      transform var(--dur-base) var(--ease-out);
+  }
+
+  .drawer__link:hover .drawer__arrow,
+  .drawer__link:focus-visible .drawer__arrow {
+    opacity: 1;
+    transform: none;
+  }
+
+  .drawer__link:hover .drawer__index {
+    color: var(--accent);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .drawer:not([hidden]) .drawer__item {
+      animation: drawer-in var(--dur-base) var(--ease-out) backwards;
+      animation-delay: calc(var(--i) * 28ms + 40ms);
+    }
+  }
+
+  @keyframes drawer-in {
+    from {
+      opacity: 0;
+      transform: translateY(0.6rem);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @media (min-width: 1081px) {
+    .drawer {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  // Drawer behaviour lives with the component that owns the markup.
+  const toggle = document.querySelector<HTMLButtonElement>('[data-menu-toggle]');
+  const drawer = document.querySelector<HTMLElement>('[data-drawer]');
+
+  if (toggle && drawer) {
+    let lastFocused: Element | null = null;
+
+    const open = (): void => {
+      lastFocused = document.activeElement;
+      drawer.hidden = false;
+      toggle.setAttribute('aria-expanded', 'true');
+      toggle.setAttribute('aria-label', 'Close section menu');
+      document.body.style.overflow = 'hidden';
+      drawer.querySelector<HTMLAnchorElement>('a')?.focus();
+    };
+
+    const close = (restoreFocus = true): void => {
+      drawer.hidden = true;
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.setAttribute('aria-label', 'Open section menu');
+      document.body.style.overflow = '';
+      if (restoreFocus) (lastFocused as HTMLElement | null)?.focus();
+    };
+
+    toggle.addEventListener('click', () => {
+      if (drawer.hidden) open();
+      else close();
+    });
+
+    // Any navigation inside the drawer dismisses it.
+    drawer.querySelectorAll('a').forEach((link) => {
+      link.addEventListener('click', () => close(false));
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !drawer.hidden) close();
+    });
+
+    // If the viewport grows past the breakpoint, reset to the desktop state.
+    window.matchMedia('(min-width: 1081px)').addEventListener('change', (event) => {
+      if (event.matches && !drawer.hidden) close(false);
+    });
+  }
+</script>

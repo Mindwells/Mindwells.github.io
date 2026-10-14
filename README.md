@@ -1,72 +1,166 @@
+# mindwells.github.io
 
-<h1 align="center">
-AcadHomepage
-</h1>
+Personal homepage — [mindwells.github.io](https://mindwells.github.io)
 
-<div align="center">
+Built with [Astro](https://astro.build). Static output, no runtime framework, deployed to GitHub Pages by GitHub Actions.
 
-[![](https://img.shields.io/github/stars/RayeRen/acad-homepage.github.io)](https://github.com/RayeRen/acad-homepage.github.io)
-[![](https://img.shields.io/github/forks/RayeRen/acad-homepage.github.io)](https://github.com/RayeRen/acad-homepage.github.io)
-[![](https://img.shields.io/github/issues/RayeRen/acad-homepage.github.io)](https://github.com/RayeRen/acad-homepage.github.io)
-[![](https://img.shields.io/github/license/RayeRen/acad-homepage.github.io)](https://github.com/RayeRen/acad-homepage.github.io/blob/main/LICENSE)  | [中文文档](./docs/README-zh.md) 
-</div>
+---
 
-<p align="center">A Modern and Responsive Academic Personal Homepage</p>
+## Quick start
 
-<p align="center">
-    <br>
-    <img src="docs/screenshot.png" width="100%"/>
-    <br>
-</p>
+```bash
+npm install
+npm run dev      # http://localhost:4321
+```
 
-Some examples:
-- [Demo Page](https://rayeren.github.io/acad-homepage.github.io/)
-- [Personal Homepage of the author](https://rayeren.github.io/)
+| Command           | Does                                     |
+| ----------------- | ---------------------------------------- |
+| `npm run dev`     | Dev server with hot reload               |
+| `npm run build`   | Build the static site into `dist/`       |
+| `npm run preview` | Serve the built `dist/` locally          |
+| `npm run check`   | Type-check the project                   |
 
-## Key Features
-- **Automatically update google scholar citations**: using the google scholar crawler and github action, this REPO can update the author citations and publication citations automatically.
-- **Support Google analytics**: you can trace the traffics of your homepage by easy configuration.
-- **Responsive**: this homepage automatically adjust for different screen sizes and viewports.
-- **Beautiful and Simple Design**: this homepage is beautiful and simple, which is very suitable for academic personal homepage.
-- **SEO**: search Engine Optimization (SEO) helps search engines find the information you publish on your homepage easily, then rank it against similar websites.
+---
 
-## Quick Start
+## Editing content
 
-1. Fork this REPO and rename to `USERNAME.github.io`, where `USERNAME` is your github USERNAME.
-1. Configure the google scholar citation crawler:
-    1. Find your google scholar ID in the url of your google scholar page (e.g., https://scholar.google.com/citations?user=SCHOLAR_ID), where `SCHOLAR_ID` is your google scholar ID.
-    1. Set GOOGLE_SCHOLAR_ID variable to your google scholar ID in `Settings -> Secrets -> Actions -> New repository secret` of the REPO website with `name=GOOGLE_SCHOLAR_ID` and `value=SCHOLAR_ID`.
-    1. Click the `Action` of the REPO website and enable the workflows by clicking *"I understand my workflows, go ahead and enable them"*. This github action will generate google scholar citation stats data `gs_data.json` in `google-scholar-stats` branch of your REPO. When you update your main branch, this action will be triggered. This action will also be trigger 08:00 UTC everyday.
-1. Generate favicon using [favicon-generator](https://redketchup.io/favicon-generator) and download all generated files to `REPO/images`.
-1. Modify the configuration of your homepage `_config.yml`:
-    1. `title`: the title of your homepage
-    1. `description`: the description of your homepage
-    1. `repository`: USER_NAME/REPO_NAME  
-    1. `google_analytics_id` (optional): google analytics ID
-    1. SEO Related keys (optional): get these keys from search engine consoles (e.g. Google, Bing and Baidu) and paste here.
-    1. `author`: the author information of this homepage, including some other websites, emails, city and univeristy.
-    1. More configuration details are described in the comments.
-1. Add your homepage content in `_pages/about.md`.
-    1. You can use html+markdown syntax just same as jekyll.
-    1. You can use a `<span>` tag with class `show_paper_citations` and attribute `data` to display the citations of your paper. Set the data to the google scholar paper ID. For
-        ```html
-        <span class='show_paper_citations' data='DhtAFkwAAAAJ:ALROH1vI_8AC'></span>
-        ``` 
-        > Q: How to get the google scholar paper ID?   
-        > A: Enter your google scholar homepage and click the paper name. Then you can see the paper ID from `citation_for_view=XXXX`, where `XXXX` is the required paper ID.
-1. Your page will be published at `https://USERNAME.github.io`.
+### Personal details, links, contact
 
-## Debug Locally
+Everything about *who you are* lives in one file: **`src/data/profile.ts`**.
 
-1. Clone your REPO to local using `git clone`.
-1. Install Jekyll building environment, including `Ruby`, `RubyGems`, `GCC` and `Make` following [the installation guide](https://jekyllrb.com/docs/installation/#requirements).
-1. Run `bash run_server.sh` to start Jekyll livereload server.
-1. Open http://127.0.0.1:4000 in your browser.
-1. If you change the source code of the website, the livereload server will automatically refresh.
-1. When you finish the modification of your homepage, `commit` your changings and `push` to your remote REPO using `git` command.
+Set a URL and it appears; leave it `null` and it stays hidden. No template
+changes are needed to add a Google Scholar or ORCID link — fill in `href`.
 
-# Acknowledges
+```ts
+{ label: 'Google Scholar', href: 'https://scholar.google.com/...', icon: 'scholar' },
+```
 
-- AcadHomepage incorporates Font Awesome, which is distributed under the terms of the SIL OFL 1.1 and MIT License.
-- AcadHomepage is influenced by the github repo [mmistakes/minimal-mistakes](https://github.com/mmistakes/minimal-mistakes), which is distributed under the MIT License.
-- AcadHomepage is influenced by the github repo [academicpages/academicpages.github.io](https://github.com/academicpages/academicpages.github.io), which is distributed under the MIT License.
+To add a profile photo, drop a square image (≥800px) into `public/images/`
+and point `profile.avatar.src` at it. Until then the site renders a
+typographic monogram.
+
+### Education and experience timeline
+
+`src/data/education.ts` — an ordered array, newest first. Mark the current
+position with `current: true` to give it the accent treatment.
+
+### Research areas
+
+`src/data/research.ts` — also drives the hero animation, so the motion is
+literally made of the research topics.
+
+### News, publications, awards, experience entries
+
+These are Markdown content collections. Each is **empty by design** right
+now, and each section shows a written placeholder until its first entry
+appears — then it renders automatically. No template edits.
+
+```
+src/content/news/2026-09-joining-dut.md
+src/content/publications/2026-my-paper.md
+src/content/awards/2025-some-prize.md
+src/content/experience/2025-summer-intern.md
+```
+
+Example publication:
+
+```markdown
+---
+title: 'A Paper Title'
+authors: ['Yuan Zhou', 'Jihao Shi']
+selfIndex: 0          # which author is you — rendered emphasised
+venue: 'Proceedings of Some Conference'
+year: 2026
+type: conference      # conference | journal | preprint | workshop
+abbr: 'ACL'
+abstract: 'One or two sentences.'
+links:
+  - { label: 'Paper', href: 'https://...' }
+  - { label: 'Code', href: 'https://...' }
+featured: true        # pins to the top
+---
+
+Optional Markdown body.
+```
+
+Example news item:
+
+```markdown
+---
+title: 'Paper accepted at ACL 2026'
+date: 2026-05-02
+tag: 'Paper'
+href: 'https://...'   # optional
+---
+
+Optional one-line detail shown under the title.
+```
+
+Fields are validated at build time — a typo in a field name fails the build
+rather than silently rendering nothing.
+
+---
+
+## Design system
+
+The whole visual language derives from **`src/styles/tokens.css`**: colour,
+type scale, spacing, and motion curves. Components never hard-code raw
+values, so changing a token changes the site coherently.
+
+- **Colour** — paper-white ground, ink-black text, one desaturated indigo
+  accent. Deliberately avoids pure `#fff`/`#000`.
+- **Type** — serif for voice (headings), sans for information (body), mono
+  for metadata (dates, labels, indices). Fluid `clamp()` scale.
+- **Space** — 8pt base, fluid section rhythm.
+- **Motion** — one easing family; everything respects
+  `prefers-reduced-motion`.
+- **Dark mode** — re-derived surfaces and a lightened accent, not a CSS
+  filter. Follows the system preference; the header toggle overrides it.
+
+---
+
+## Structure
+
+```
+src/
+├── components/          One file per section or UI element
+│   └── ui/Icon.astro    Inline SVG set (no icon font, no requests)
+├── data/                profile, research, education — typed data
+├── content/             Markdown collections (news, publications, …)
+├── layouts/Base.astro   Document shell, SEO, schema.org
+├── pages/index.astro    Section composition
+├── scripts/enhance.ts   Progressive enhancement (reveal, nav, copy, theme)
+├── styles/              tokens.css → base.css → utilities.css
+└── utils/content.ts     Warning-free collection access
+public/                  Icons, fonts, images — served verbatim
+```
+
+### The hero animation
+
+`src/components/RetrievalViz.astro` draws the research itself: a query
+scatters into tokens, passages light up as retrieved evidence, and the
+evidence converges into an answer. Canvas 2D, ~4KB, no WebGL and no
+dependency. It pauses when off-screen or when the tab is hidden, and renders
+a single static frame under `prefers-reduced-motion`.
+
+---
+
+## Deployment
+
+Pushing to `main` triggers `.github/workflows/deploy.yml`, which builds the
+site and publishes it to GitHub Pages.
+
+**One-time repository setting:** under *Settings → Pages → Build and
+deployment → Source*, choose **GitHub Actions**. The legacy "deploy from a
+branch" mode expects a Jekyll site and will not build this project.
+
+---
+
+## History
+
+The previous academicpages/Jekyll version is preserved on the
+`v1-academicpages` tag:
+
+```bash
+git checkout v1-academicpages
+```

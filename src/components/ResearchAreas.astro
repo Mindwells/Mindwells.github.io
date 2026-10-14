@@ -1,0 +1,104 @@
+---
+import Icon from './ui/Icon.astro';
+
+/**
+ * Evidence-backed list of research areas.
+ *
+ * Rendered as an editorial "ledger": each area is a row with its own rule,
+ * an index, and a short statement. Far more legible than a grid of cards,
+ * and it scales to any number of entries without becoming a wall.
+ */
+export interface Props {
+  areas: { token: string; title: string; blurb: string }[];
+}
+
+const { areas } = Astro.props;
+---
+
+<ul class="areas">
+  {
+    areas.map((area, i) => (
+      <li class="area" data-reveal="up" data-reveal-delay={i * 90}>
+        <div class="area__head">
+          <span class="area__index" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+          <h3 class="area__title">{area.title}</h3>
+          <span class="area__token mono">{area.token}</span>
+        </div>
+        <p class="area__blurb">{area.blurb}</p>
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  .areas {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .area {
+    padding-block: var(--space-lg);
+    border-bottom: 1px solid var(--rule);
+    transition: background-color var(--dur-base) var(--ease-out);
+    /* Bleed the hover background into the gutter so the row reads as a unit
+       without shifting any text. */
+    margin-inline: calc(var(--space-sm) * -1);
+    padding-inline: var(--space-sm);
+    border-radius: var(--radius-md);
+  }
+
+  .area:hover {
+    background: color-mix(in srgb, var(--paper-sunken) 60%, transparent);
+  }
+
+  .area__head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-sm);
+  }
+
+  .area__index {
+    font-family: var(--font-mono);
+    font-size: var(--step--2);
+    color: var(--accent);
+    letter-spacing: var(--tracking-meta);
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .area__title {
+    font-size: var(--step-2);
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .area__token {
+    color: var(--ink-subtle);
+    font-size: var(--step--2);
+    letter-spacing: var(--tracking-meta);
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .area__blurb {
+    margin-top: var(--space-xs);
+    margin-left: calc(var(--step--2) * 2.2 + var(--space-sm));
+    color: var(--ink-muted);
+    font-size: var(--step-0);
+    max-width: 38rem;
+  }
+
+  @media (max-width: 640px) {
+    .area__blurb {
+      margin-left: 0;
+    }
+
+    .area__head {
+      flex-wrap: wrap;
+    }
+  }
+</style>

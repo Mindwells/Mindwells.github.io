@@ -1,0 +1,232 @@
+---
+import Base from '../layouts/Base.astro';
+import Hero from '../components/Hero.astro';
+import SectionHeader from '../components/SectionHeader.astro';
+import About from '../components/About.astro';
+import ResearchAreas from '../components/ResearchAreas.astro';
+import NewsList from '../components/NewsList.astro';
+import PublicationEntry from '../components/PublicationEntry.astro';
+import AwardList from '../components/AwardList.astro';
+import Timeline from '../components/Timeline.astro';
+import ExperienceList from '../components/ExperienceList.astro';
+import Contact from '../components/Contact.astro';
+import EmptyState from '../components/EmptyState.astro';
+
+import { profile } from '../data/profile';
+import { researchAreas, researchSummary } from '../data/research';
+import { education } from '../data/education';
+import { getEntries } from '../utils/content';
+
+/**
+ * Pull every collection once. Drafts are filtered out here so no individual
+ * section has to remember to do it; empty collections short-circuit without
+ * logging a warning.
+ */
+const [newsEntries, publicationEntries, awardEntries, experienceEntries] = await Promise.all([
+  getEntries('news', ({ data }) => !data.draft),
+  getEntries('publications'),
+  getEntries('awards', ({ data }) => !data.draft),
+  getEntries('experience'),
+]);
+
+const newsItems = newsEntries.map((entry) => ({
+  date: entry.data.date,
+  title: entry.data.title,
+  tag: entry.data.tag,
+  href: entry.data.href,
+  body: entry.body?.trim() || undefined,
+}));
+
+const publicationItems = publicationEntries
+  .map((entry) => ({ ...entry.data, id: entry.id }))
+  .sort((a, b) => {
+    if (a.featured !== b.featured) return a.featured ? -1 : 1;
+    if (a.year !== b.year) return b.year - a.year;
+    return a.title.localeCompare(b.title);
+  });
+
+const awardItems = awardEntries.map((entry) => ({
+  date: entry.data.date,
+  title: entry.data.title,
+  level: entry.data.level,
+  issuer: entry.data.issuer,
+}));
+
+const experienceItems = experienceEntries
+  .map((entry) => ({
+    title: entry.data.title,
+    organization: entry.data.organization,
+    period: entry.data.period,
+    location: entry.data.location,
+    role: entry.data.role,
+    href: entry.data.href,
+    body: entry.body?.trim() || undefined,
+    start: entry.data.start,
+  }))
+  .sort((a, b) => b.start.getTime() - a.start.getTime());
+
+const hasNews = newsItems.length > 0;
+const hasPublications = publicationItems.length > 0;
+const hasAwards = awardItems.length > 0;
+const hasExperience = experienceItems.length > 0;
+---
+
+<Base description={profile.bio}>
+  <Hero />
+
+  <!-- 01 — About -->
+  <section class="section" id="about" aria-labelledby="about-title">
+    <div class="container">
+      <SectionHeader
+        index="01"
+        title="About"
+        id="about"
+        lede="A short version of who I am and what I work on."
+      />
+      <About />
+    </div>
+  </section>
+
+  <!-- 02 — Research -->
+  <section class="section section--ruled" id="research" aria-labelledby="research-title">
+    <div class="container">
+      <SectionHeader
+        index="02"
+        title="Research"
+        id="research"
+        lede={`My work sits within ${researchSummary}, currently along two lines.`}
+      />
+      <ResearchAreas areas={researchAreas} />
+    </div>
+  </section>
+
+  <!-- 03 — News -->
+  <section class="section section--ruled" id="news" aria-labelledby="news-title">
+    <div class="container">
+      <SectionHeader index="03" title="News" id="news" lede="Talks, papers, and moves, newest first." />
+      {
+        hasNews ? (
+          <NewsList items={newsItems} />
+        ) : (
+          <EmptyState
+            icon="news"
+            message="Nothing to report yet. Paper acceptances and talk announcements will appear here as they happen."
+          />
+        )
+      }
+    </div>
+  </section>
+
+  <!-- 04 — Publications -->
+  <section class="section section--ruled" id="publications" aria-labelledby="publications-title">
+    <div class="container">
+      <SectionHeader
+        index="04"
+        title="Publications"
+        id="publications"
+        lede="Peer-reviewed work, with links to the paper and code where available."
+      />
+      {
+        hasPublications ? (
+          <div class="pubs">
+            {publicationItems.map((item, i) => (
+              <PublicationEntry
+                title={item.title}
+                authors={item.authors}
+                selfIndex={item.selfIndex}
+                venue={item.venue}
+                year={item.year}
+                type={item.type}
+                abbr={item.abbr}
+                abstract={item.abstract}
+                links={item.links}
+                thumbnail={item.thumbnail}
+                featured={item.featured}
+                index={i}
+              />
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            icon="book"
+            message="I am at the start of my Master's, so there is nothing published to list yet. If you are curious about what I am working on before it appears here, email me."
+          />
+        )
+      }
+    </div>
+  </section>
+
+  <!-- 05 — Awards -->
+  <section class="section section--ruled" id="awards" aria-labelledby="awards-title">
+    <div class="container">
+      <SectionHeader
+        index="05"
+        title="Honors &amp; Awards"
+        id="awards"
+        lede="Scholarships, prizes, and recognitions."
+      />
+      {
+        hasAwards ? (
+          <AwardList items={awardItems} />
+        ) : (
+          <EmptyState
+            icon="award"
+            message="This section is reserved for scholarships and awards. It will fill in as they are earned."
+          />
+        )
+      }
+    </div>
+  </section>
+
+  <!-- 06 — Education -->
+  <section class="section section--ruled" id="education" aria-labelledby="education-title">
+    <div class="container">
+      <SectionHeader index="06" title="Education" id="education" />
+      <Timeline entries={education} />
+    </div>
+  </section>
+
+  <!-- 07 — Experience -->
+  <section class="section section--ruled" id="experience" aria-labelledby="experience-title">
+    <div class="container">
+      <SectionHeader
+        index="07"
+        title="Experience"
+        id="experience"
+        lede="Research and industry positions."
+      />
+      {
+        hasExperience ? (
+          <ExperienceList items={experienceItems} />
+        ) : (
+          <EmptyState
+            icon="briefcase"
+            message="Internships and research positions will be listed here. None to show at the moment."
+          />
+        )
+      }
+    </div>
+  </section>
+
+  <!-- 08 — Contact -->
+  <section class="section section--ruled" id="contact" aria-labelledby="contact-title">
+    <div class="container">
+      <SectionHeader
+        index="08"
+        title="Contact"
+        id="contact"
+        lede="Open to conversations about research, collaboration, or anything in the overlap."
+      />
+      <Contact />
+    </div>
+  </section>
+</Base>
+
+<style>
+  /* The publications list supplies its own dividers; this only controls the
+     rhythm between entries when thumbnails change the row heights. */
+  .pubs {
+    display: flex;
+    flex-direction: column;
+  }
+</style>

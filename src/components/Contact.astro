@@ -1,0 +1,285 @@
+---
+import Icon from './ui/Icon.astro';
+import { profile, activeLinks } from '../data/profile';
+
+/**
+ * Contact block.
+ *
+ * Deliberately not a form — there is no backend, and a fake form is worse
+ * than none. Instead the email is presented large and copyable, with the
+ * profile links beside it.
+ */
+
+const emailLink = activeLinks.find((link) => link.icon === 'mail');
+const otherLinks = activeLinks.filter((link) => link.icon !== 'mail');
+---
+
+<div class="contact" data-reveal="up">
+  <div class="contact__primary">
+    <p class="label">Email</p>
+    {
+      emailLink?.href && (
+        <>
+          <div class="contact__email-row">
+            <a class="contact__email" href={emailLink.href}>
+              {emailLink.handle}
+            </a>
+            <button
+              class="contact__copy"
+              type="button"
+              data-copy={emailLink.handle}
+              data-copy-label="Copy email address"
+              aria-label="Copy email address"
+            >
+              <span class="contact__copy-icon contact__copy-icon--idle">
+                <Icon name="copy" size={15} />
+              </span>
+              <span class="contact__copy-icon contact__copy-icon--done">
+                <Icon name="check" size={15} />
+              </span>
+              <span class="contact__copy-text">Copy</span>
+            </button>
+            <span class="visually-hidden" role="status" aria-live="polite" data-copy-status></span>
+          </div>
+          <p class="contact__note">
+            The fastest way to reach me. I read everything, and reply to anything specific.
+          </p>
+        </>
+      )
+    }
+  </div>
+
+  {
+    otherLinks.length > 0 && (
+      <div class="contact__secondary">
+        <p class="label">Elsewhere</p>
+        <ul class="contact__links">
+          {otherLinks.map((link) => (
+            <li>
+              <a
+                class="contact__link"
+                href={link.href}
+                rel="me noopener noreferrer"
+                target={link.href.startsWith('http') ? '_blank' : undefined}
+              >
+                <span class="contact__link-icon"><Icon name={link.icon} size={16} /></span>
+                <span class="contact__link-label">{link.label}</span>
+                <span class="contact__link-handle mono">{link.handle}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
+  }
+
+  <div class="contact__location">
+    <p class="label">Based in</p>
+    <p class="contact__place">
+      <Icon name="pin" size={15} />
+      <span>{profile.location}</span>
+    </p>
+  </div>
+</div>
+
+<style>
+  .contact {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    column-gap: var(--gutter);
+    row-gap: var(--space-xl);
+    padding-top: var(--space-xl);
+    border-top: 1px solid var(--rule);
+  }
+
+  .contact__primary {
+    grid-row: span 2;
+  }
+
+  .contact__email-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: var(--space-sm);
+  }
+
+  .contact__email {
+    font-family: var(--font-serif);
+    font-size: var(--step-3);
+    letter-spacing: var(--tracking-heading);
+    color: var(--ink);
+    line-height: 1.2;
+    word-break: break-word;
+    position: relative;
+  }
+
+  /* Underline sweep on hover — the same gesture as the nav links, so the
+     page has one consistent "this is interactive" language. */
+  .contact__email::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -0.12em;
+    height: 1px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+
+  .contact__email:hover {
+    color: var(--accent);
+  }
+
+  .contact__email:hover::after {
+    transform: scaleX(1);
+  }
+
+  .contact__copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 40px;
+    padding: 0.4rem 0.8rem;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--ink-muted);
+    font-size: var(--step--2);
+    font-family: var(--font-mono);
+    letter-spacing: var(--tracking-meta);
+    text-transform: uppercase;
+    cursor: pointer;
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out);
+  }
+
+  .contact__copy:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-wash);
+  }
+
+  .contact__copy.is-copied {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .contact__copy-icon {
+    display: grid;
+    place-items: center;
+    transition:
+      opacity var(--dur-fast) var(--ease-out),
+      transform var(--dur-fast) var(--ease-out);
+  }
+
+  .contact__copy-icon--done {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+
+  .contact__copy.is-copied .contact__copy-icon--idle {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+
+  .contact__copy.is-copied .contact__copy-icon--done {
+    opacity: 1;
+    transform: none;
+  }
+
+  .contact__note {
+    margin-top: var(--space-md);
+    color: var(--ink-muted);
+    font-size: var(--step--1);
+    max-width: 30rem;
+  }
+
+  .contact__links {
+    list-style: none;
+    margin: var(--space-sm) 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .contact__links li + li {
+    margin-top: 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .contact__link {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.7rem 0;
+    min-height: 44px;
+    color: var(--ink);
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+
+  .contact__link-icon {
+    display: grid;
+    place-items: center;
+    color: var(--ink-subtle);
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      transform var(--dur-base) var(--ease-spring);
+  }
+
+  .contact__link-label {
+    font-size: var(--step--1);
+    flex: 1;
+  }
+
+  .contact__link-handle {
+    color: var(--ink-subtle);
+    font-size: var(--step--2);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .contact__link:hover {
+    color: var(--accent);
+  }
+
+  .contact__link:hover .contact__link-icon {
+    color: var(--accent);
+    transform: translateY(-2px);
+  }
+
+  .contact__location {
+    align-self: start;
+  }
+
+  .contact__place {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: var(--space-sm);
+    color: var(--ink-muted);
+    font-size: var(--step--1);
+  }
+
+  .contact__place :global(svg) {
+    color: var(--ink-subtle);
+  }
+
+  @media (max-width: 860px) {
+    .contact {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .contact__primary {
+      grid-row: auto;
+    }
+
+    .contact__email {
+      font-size: var(--step-2);
+    }
+  }
+</style>

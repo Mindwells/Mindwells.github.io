@@ -1,0 +1,112 @@
+---
+/**
+ * Awards list — a compact ledger with the year as the anchor.
+ */
+export interface AwardItem {
+  date: Date;
+  title: string;
+  level?: string;
+  issuer?: string;
+  href?: string;
+}
+
+export interface Props {
+  items: AwardItem[];
+}
+
+const { items } = Astro.props;
+
+const yearOf = (date: Date): string => String(date.getUTCFullYear());
+const sorted = [...items].sort((a, b) => b.date.getTime() - a.date.getTime());
+---
+
+<ul class="awards">
+  {
+    sorted.map((item, i) => (
+      <li class="award" data-reveal="up" data-reveal-delay={Math.min(i, 6) * 60}>
+        <span class="award__year mono">{yearOf(item.date)}</span>
+        <div class="award__body">
+          <p class="award__title">
+            {item.href ? (
+              <a href={item.href} target="_blank" rel="noopener noreferrer">
+                {item.title}
+              </a>
+            ) : (
+              item.title
+            )}
+          </p>
+          {item.issuer && <p class="award__issuer">{item.issuer}</p>}
+        </div>
+        {item.level && <span class="award__level mono">{item.level}</span>}
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  .awards {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .award {
+    display: grid;
+    grid-template-columns: 3.5rem minmax(0, 1fr) auto;
+    align-items: baseline;
+    column-gap: var(--space-md);
+    padding-block: var(--space-md);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .award__year {
+    color: var(--ink-subtle);
+    font-size: var(--step--2);
+    letter-spacing: var(--tracking-meta);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .award__title {
+    font-size: var(--step-0);
+    color: var(--ink);
+    max-width: none;
+  }
+
+  .award__title a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--rule-strong);
+    text-underline-offset: 0.2em;
+  }
+
+  .award__title a:hover {
+    color: var(--accent);
+    text-decoration-color: currentColor;
+  }
+
+  .award__issuer {
+    margin-top: 0.15rem;
+    color: var(--ink-muted);
+    font-size: var(--step--1);
+  }
+
+  .award__level {
+    color: var(--ink-subtle);
+    font-size: var(--step--2);
+    letter-spacing: var(--tracking-meta);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 640px) {
+    .award {
+      grid-template-columns: 3rem minmax(0, 1fr);
+      row-gap: 0.2rem;
+    }
+
+    .award__level {
+      grid-column: 2;
+    }
+  }
+</style>
