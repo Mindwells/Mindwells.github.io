@@ -1,10 +1,13 @@
 ---
+import '../styles/fonts.css';
 import '../styles/tokens.css';
 import '../styles/base.css';
 import '../styles/utilities.css';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import { profile } from '../data/profile';
+import { profile, activeLinks } from '../data/profile';
+import { education } from '../data/education';
+import { researchAreas, researchSummary } from '../data/research';
 
 export interface Props {
   title?: string;
@@ -22,8 +25,14 @@ const {
 const pageTitle = fullTitle ?? (title ? `${title} — ${profile.name}` : `${profile.name} — ${profile.role}`);
 const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://mindwells.github.io').href;
 
-// schema.org Person — helps the site surface correctly in search results for
-// the name, and is the machine-readable half of "this is who I am".
+// Everything below is derived from `src/data/*` rather than restated here, so
+// changing a link or a school updates the structured data too.
+const emailLink = activeLinks.find((link) => link.icon === 'mail');
+const externalUrls = activeLinks
+  .map((link) => link.href)
+  .filter((href): href is string => typeof href === 'string' && href.startsWith('http'));
+
+// schema.org Person — the machine-readable half of "this is who I am".
 const personSchema = {
   '@context': 'https://schema.org',
   '@type': 'Person',
@@ -33,14 +42,14 @@ const personSchema = {
     '@type': 'Organization',
     name: profile.affiliation,
   },
-  alumniOf: [
-    { '@type': 'Organization', name: 'Dalian University of Technology' },
-    { '@type': 'Organization', name: 'Wuhan University of Technology' },
-  ],
-  email: 'mailto:serenitymindwell@gmail.com',
+  alumniOf: education.map((entry) => ({
+    '@type': 'Organization',
+    name: entry.institution,
+  })),
+  ...(emailLink?.href ? { email: emailLink.href } : {}),
   url: canonical,
-  sameAs: ['https://github.com/Mindwells'],
-  knowsAbout: ['Natural Language Processing', 'Retrieval-Augmented Generation', 'Large Language Model Reasoning'],
+  ...(externalUrls.length > 0 ? { sameAs: externalUrls } : {}),
+  knowsAbout: [researchSummary, ...researchAreas.map((area) => area.title)],
 };
 ---
 
@@ -109,5 +118,14 @@ const personSchema = {
       <slot />
     </main>
     <Footer />
+
+    <!--
+      The single site-wide enhancement bundle: scroll reveal, active-section
+      navigation, theme toggle, copy-to-clipboard. Every feature in it is an
+      enhancement — the page is complete and readable without it.
+    -->
+    <script>
+      import '../scripts/enhance.ts';
+    </script>
   </body>
 </html>

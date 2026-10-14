@@ -71,16 +71,17 @@ export const profile = {
     { label: 'DBLP', href: null, icon: 'dblp', handle: '—' },
     { label: 'LinkedIn', href: null, icon: 'linkedin', handle: '—' },
     { label: 'X', href: null, icon: 'x', handle: '—' },
-  ] satisfies ProfileLink[],
+  ] as ProfileLink[],
 
   /** Optional CV. Put the PDF in `public/cv/` and set the filename here. */
   cv: {
     file: null as string | null,
     label: 'Curriculum Vitae',
   },
-} as const;
+};
 
 /** Links that actually resolve — use this when rendering. */
-export const activeLinks: ProfileLink[] = profile.links.filter(
-  (link): link is ProfileLink & { href: string } => typeof link.href === 'string' && link.href.length > 0,
+export const activeLinks = profile.links.filter(
+  (link): link is ProfileLink & { href: string } =>
+    typeof link.href === 'string' && link.href.length > 0,
 );

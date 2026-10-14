@@ -1,4 +1,5 @@
-import { defineCollection, z } from 'astro:content';
+import { defineCollection } from 'astro:content';
+import { z } from 'astro/zod';
 import { glob } from 'astro/loaders';
 
 /**
@@ -58,6 +59,7 @@ const publications = defineCollection({
     /** Pin to the top of the list regardless of year. */
     featured: z.boolean().default(false),
     selected: z.boolean().default(false),
+    draft: z.boolean().default(false),
   }),
 });
 
@@ -83,6 +85,7 @@ const experience = defineCollection({
     location: z.string().optional(),
     role: z.string().optional(),
     href: z.string().url().optional(),
+    draft: z.boolean().default(false),
   }),
 });
 

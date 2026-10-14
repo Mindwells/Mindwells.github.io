@@ -47,6 +47,32 @@ function initReveal(): void {
   );
 
   targets.forEach((el) => observer.observe(el));
+
+  /**
+   * Safety net.
+   *
+   * The trigger margin deliberately holds elements back until they are ~12%
+   * into the viewport. On a short page — or on the last section — content can
+   * live permanently inside that sliver and would never appear. Reaching the
+   * bottom of the document reveals whatever is left, so nothing can stay
+   * invisible.
+   */
+  let swept = false;
+  const sweep = (): void => {
+    if (swept) return;
+    const atBottom =
+      window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+    if (!atBottom) return;
+    swept = true;
+    for (const el of targets) {
+      el.classList.add('is-revealed');
+      observer.unobserve(el);
+    }
+    window.removeEventListener('scroll', sweep);
+  };
+
+  window.addEventListener('scroll', sweep, { passive: true });
+  sweep();
 }
 
 /* -------------------------------------------------------------------------

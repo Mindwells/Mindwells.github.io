@@ -112,6 +112,10 @@ const otherLinks = activeLinks.filter((link) => link.icon !== 'mail');
     line-height: 1.2;
     word-break: break-word;
     position: relative;
+    /* ≥44px touch target; flex centring keeps the text optically in place. */
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
   }
 
   /* Underline sweep on hover — the same gesture as the nav links, so the
@@ -141,7 +145,7 @@ const otherLinks = activeLinks.filter((link) => link.icon !== 'mail');
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    min-height: 40px;
+    min-height: 44px;
     padding: 0.4rem 0.8rem;
     border: 1px solid var(--rule-strong);
     border-radius: var(--radius-full);

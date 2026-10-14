@@ -41,9 +41,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
   font-optical-sizing: auto;
   min-height: 100dvh;
-  /* The hero canvas is a fixed-position layer; keep the page from flashing
-     a scrollbar mid-animation. */
-  overflow-x: hidden;
+  /* `clip` rather than `hidden`: both suppress stray horizontal overflow, but
+     `hidden` turns the body into a scroll container, which is a well-known way
+     to break `position: sticky` on descendants (the header). */
+  overflow-x: clip;
 }
 
 /* --------------------------------------------------------------------------

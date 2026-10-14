@@ -89,7 +89,6 @@
     let passages: Passage[] = [];
     let frame = 0;
     let running = false;
-    let cycle = 0;
 
     /* --- Geometry ------------------------------------------------------ */
 
@@ -331,8 +330,6 @@
         ctx.lineWidth = 1;
         ctx.stroke();
       }
-
-      cycle = t;
     };
 
     /* --- Loop ---------------------------------------------------------- */

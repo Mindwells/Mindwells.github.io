@@ -48,7 +48,14 @@ const navSections = sections;
     </nav>
 
     <div class="header__actions">
-      <button class="header__icon-button" type="button" data-theme-toggle aria-pressed="false">
+      <button
+        class="header__icon-button"
+        type="button"
+        data-theme-toggle
+        aria-pressed="false"
+        aria-label="Switch theme"
+        title="Switch theme"
+      >
         <span class="header__icon header__icon--sun"><Icon name="sun" size={17} /></span>
         <span class="header__icon header__icon--moon"><Icon name="moon" size={17} /></span>
       </button>
@@ -128,6 +135,9 @@ const navSections = sections;
     font-weight: 500;
     letter-spacing: var(--tracking-body);
     flex-shrink: 0;
+    /* Expands the hit target to ≥44px without changing the visual box. */
+    padding-block: 0.6rem;
+    margin-block: -0.6rem;
   }
 
   .header__brand:hover {
@@ -247,8 +257,10 @@ const navSections = sections;
   .header__icon-button {
     display: grid;
     place-items: center;
-    width: 2.25rem;
-    height: 2.25rem;
+    /* 44px hit target; the control has no resting background, so the extra
+       size is only felt by the pointer, not seen. */
+    width: 2.75rem;
+    height: 2.75rem;
     padding: 0;
     border: 1px solid transparent;
     border-radius: var(--radius-full);

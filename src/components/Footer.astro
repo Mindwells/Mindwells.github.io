@@ -73,8 +73,10 @@ const socialLinks = activeLinks.filter((link) => link.icon !== 'mail');
 <style>
   .footer {
     border-top: 1px solid var(--rule);
+    /* No top margin: the preceding section already contributes its full
+       bottom padding, and stacking both produced a 2× gap that broke the
+       page's vertical rhythm. */
     padding-block: var(--space-2xl) var(--space-xl);
-    margin-top: var(--section-y);
     background: var(--paper);
   }
 
@@ -126,6 +128,13 @@ const socialLinks = activeLinks.filter((link) => link.icon !== 'mail');
     position: relative;
   }
 
+  /* Widens the hit target to ≥44px without shifting the underlined text. */
+  .footer__email-link::before {
+    content: '';
+    position: absolute;
+    inset: -11px -6px;
+  }
+
   .footer__email-link::after {
     content: '';
     position: absolute;
@@ -156,9 +165,17 @@ const socialLinks = activeLinks.filter((link) => link.icon !== 'mail');
     background: transparent;
     color: var(--ink-subtle);
     cursor: pointer;
+    position: relative;
     transition:
       color var(--dur-fast) var(--ease-out),
       border-color var(--dur-fast) var(--ease-out);
+  }
+
+  /* 28px visual box, 44px+ hit target. */
+  .footer__copy::after {
+    content: '';
+    position: absolute;
+    inset: -9px;
   }
 
   .footer__copy:hover {

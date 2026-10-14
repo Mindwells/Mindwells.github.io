@@ -17,8 +17,10 @@
 
   --ink: #14161a;
   --ink-strong: #000000;
-  --ink-muted: #5c6068;
-  --ink-subtle: #83878f;
+  /* Both greys are tuned to clear WCAG AA (4.5:1) on --paper, including the
+     smaller mono/meta text. --ink-muted ≈ 6.5:1, --ink-subtle ≈ 5.4:1. */
+  --ink-muted: #575b62;
+  --ink-subtle: #63676f;
 
   --rule: #e3e0da;
   --rule-strong: #cdc9c1;
@@ -149,7 +151,7 @@
     --ink: #e8e6e1;
     --ink-strong: #ffffff;
     --ink-muted: #a3a7ae;
-    --ink-subtle: #767b83;
+    --ink-subtle: #82878f;
 
     --rule: #262a2f;
     --rule-strong: #383d44;
@@ -176,7 +178,7 @@
   --ink: #e8e6e1;
   --ink-strong: #ffffff;
   --ink-muted: #a3a7ae;
-  --ink-subtle: #767b83;
+  --ink-subtle: #82878f;
 
   --rule: #262a2f;
   --rule-strong: #383d44;

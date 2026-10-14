@@ -51,9 +51,15 @@ literally made of the research topics.
 
 ### News, publications, awards, experience entries
 
-These are Markdown content collections. Each is **empty by design** right
-now, and each section shows a written placeholder until its first entry
-appears — then it renders automatically. No template edits.
+These are Markdown content collections. Each directory ships a
+**`_template.md`** documenting the exact frontmatter — copy it, rename it, and
+fill it in.
+
+Every collection supports `draft: true`. While an entry is a draft it is
+excluded from the site entirely, so you can commit work in progress without
+publishing it. The sections currently contain only drafts, which is why each
+one shows a written placeholder instead of an empty list; add a real entry and
+it renders itself with no template edits.
 
 ```
 src/content/news/2026-09-joining-dut.md
@@ -142,6 +148,30 @@ scatters into tokens, passages light up as retrieved evidence, and the
 evidence converges into an answer. Canvas 2D, ~4KB, no WebGL and no
 dependency. It pauses when off-screen or when the tab is hidden, and renders
 a single static frame under `prefers-reduced-motion`.
+
+---
+
+## Design audit
+
+`tools/measure.mjs` loads the built site in headless Edge over the Chrome
+DevTools Protocol and measures what would otherwise be judged by eye, then
+writes screenshots and a JSON report to `.audit/`.
+
+It checks: horizontal overflow, WCAG contrast (light and dark), tap-target
+sizes (hit-tested, so expanded hit areas count), reveal-animation wiring,
+sticky header behaviour, font loading, and cumulative layout shift — plus
+robustness passes for `prefers-reduced-motion`, JavaScript disabled, the theme
+toggle, and the mobile drawer.
+
+```bash
+npm run build
+node tools/serve.mjs &                       # serves dist/ on :4321
+msedge --headless=new --remote-debugging-port=9223 --user-data-dir=.audit/edge about:blank &
+node tools/measure.mjs                       # writes .audit/report.json + PNGs
+```
+
+CDP is driven over a WebSocket rather than by spawning the browser from Node,
+so it also works in environments that block piped child processes.
 
 ---
 

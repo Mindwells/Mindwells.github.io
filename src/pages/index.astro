@@ -24,9 +24,9 @@ import { getEntries } from '../utils/content';
  */
 const [newsEntries, publicationEntries, awardEntries, experienceEntries] = await Promise.all([
   getEntries('news', ({ data }) => !data.draft),
-  getEntries('publications'),
+  getEntries('publications', ({ data }) => !data.draft),
   getEntries('awards', ({ data }) => !data.draft),
-  getEntries('experience'),
+  getEntries('experience', ({ data }) => !data.draft),
 ]);
 
 const newsItems = newsEntries.map((entry) => ({
