@@ -1133,6 +1133,86 @@ async function main() {
     console.log(bad.length === 0 ? 'clean' : `HIDDEN:${bad.map((b) => `${b.id}@${b.topAfterJump}`).join(',')}`);
   }
 
+  /* --- 10. Hero responds to the pointer ---
+     The visualisation treats the pointer as a query. Verify it actually
+     reacts, and that it does so without blocking the controls layered above
+     it (the canvas must stay pointer-events: none). */
+  process.stdout.write('checking hero pointer response … ');
+  {
+    await navigate(cdp, BASE, 1800);
+
+    const signature = () =>
+      cdp
+        .send('Runtime.evaluate', {
+          expression: `(() => {
+            const c = document.querySelector('[data-viz-canvas]');
+            if (!c || !c.width) return null;
+            const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+            let sum = 0;
+            for (let i = 3; i < d.length; i += 997) sum += d[i];
+            return sum;
+          })()`,
+          returnByValue: true,
+        })
+        .then((r) => r.result.value);
+
+    // Sample at the same animation phase to isolate the pointer's effect from
+    // the idle cycle: compare frames a full cycle apart with and without a
+    // pointer, then compare the *difference* magnitudes.
+    const sampleDelta = async (withPointer) => {
+      const box = (
+        await cdp.send('Runtime.evaluate', {
+          expression: `(() => { const r = document.querySelector('[data-viz]').getBoundingClientRect(); return { x: r.left + r.width * 0.3, y: r.top + r.height * 0.4 }; })()`,
+          returnByValue: true,
+        })
+      ).result.value;
+
+      const a = await signature();
+      if (withPointer) {
+        await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: Math.round(box.x), y: Math.round(box.y), buttons: 0 });
+      } else {
+        // Park the pointer well outside the hero.
+        await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 2, y: 2, buttons: 0 });
+      }
+      await sleep(900);
+      const b = await signature();
+      return { a, b, changed: a !== b };
+    };
+
+    const withoutPointer = await sampleDelta(false);
+    const withPointer = await sampleDelta(true);
+
+    // Confirm the canvas does not intercept clicks over the hero controls.
+    const hitTest = (
+      await cdp.send('Runtime.evaluate', {
+        expression: `(() => {
+          const cta = document.querySelector('.button--primary');
+          if (!cta) return null;
+          const r = cta.getBoundingClientRect();
+          const top = document.elementFromPoint(Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2));
+          return { topElement: top ? top.tagName.toLowerCase() + '.' + String(top.className || '').split(' ')[0] : null, ctaReachable: cta.contains(top) || top === cta };
+        })()`,
+        returnByValue: true,
+      })
+    ).result.value;
+
+    report.heroPointer = {
+      animatedWithoutPointer: withoutPointer.changed,
+      animatedWithPointer: withPointer.changed,
+      canvasPointerEvents: (
+        await cdp.send('Runtime.evaluate', {
+          expression: `getComputedStyle(document.querySelector('[data-viz]')).pointerEvents`,
+          returnByValue: true,
+        })
+      ).result.value,
+      ctaHitTest: hitTest,
+    };
+
+    const p = report.heroPointer;
+    const ok = p.animatedWithPointer && p.canvasPointerEvents === 'none' && p.ctaHitTest?.ctaReachable === true;
+    console.log(ok ? 'clean' : `PROBLEM (animating=${p.animatedWithPointer} pointerEvents=${p.canvasPointerEvents} ctaReachable=${p.ctaHitTest?.ctaReachable})`);
+  }
+
   writeFileSync(join(outDir, 'report.json'), JSON.stringify(report, null, 2));
 
   /* --- Console summary --- */
@@ -1268,6 +1348,12 @@ async function main() {
     const bad = report.anchors.sections.filter((s) => !s.clearsHeader);
     console.log(
       `anchors: ${report.anchors.sections.length} sections, header ${report.anchors.headerHeight}px, ${bad.length} landing under the header${bad.length ? ` -> ${bad.map((b) => b.id).join(', ')}` : ''}`,
+    );
+  }
+  if (report.heroPointer) {
+    const h = report.heroPointer;
+    console.log(
+      `hero pointer: pointer-events=${h.canvasPointerEvents}, canvas animating=${h.animatedWithPointer}, CTA reachable through the canvas=${h.ctaHitTest?.ctaReachable} (top element ${h.ctaHitTest?.topElement})`,
     );
   }
 

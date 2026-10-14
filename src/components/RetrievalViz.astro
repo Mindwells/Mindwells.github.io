@@ -90,6 +90,24 @@
     let frame = 0;
     let running = false;
 
+    /**
+     * The visitor's pointer, treated as a live query.
+     *
+     * Retrieval is the subject of this site, so the visualisation responds to
+     * the pointer the way a retriever responds to a query: passages near the
+     * pointer become relevant, evidence lines connect them to it, and tokens
+     * drift toward it. Idle behaviour is unchanged when the pointer is away,
+     * and pointer-fine only — there is no hover on touch.
+     */
+    const pointer = { x: 0, y: 0, active: false };
+
+    /** 1 at the pointer, falling to 0 at `radius`. */
+    const proximityToPointer = (x: number, y: number, radius: number): number => {
+      if (!pointer.active) return 0;
+      const distance = Math.hypot(x - pointer.x, y - pointer.y);
+      return Math.max(0, 1 - distance / radius);
+    };
+
     /* --- Geometry ------------------------------------------------------ */
 
     const resize = (): void => {
@@ -209,9 +227,10 @@
       for (const p of passages) {
         p.phase += 0.012;
         const local = 0.5 + 0.5 * Math.sin(p.phase);
-        p.glow = local * gather;
-
         const bob = Math.sin(p.phase * 0.6) * 3;
+        // Relevance is the passage's own cycle, lifted by pointer proximity.
+        const queried = proximityToPointer(p.x, p.y + bob, 260);
+        p.glow = Math.min(1, local * gather + queried * 0.55);
 
         ctx.save();
         ctx.translate(p.x, p.y + bob);
@@ -279,6 +298,14 @@
         token.x += (origin.x - token.x) * targetStrength;
         token.y += (origin.y - token.y) * targetStrength;
 
+        // A gentler pull toward the pointer, so query tokens gather around
+        // the cursor as if it were the query itself.
+        const queried = proximityToPointer(token.x, token.y, 300);
+        if (queried > 0) {
+          token.x += (pointer.x - token.x) * 0.0022 * queried;
+          token.y += (pointer.y - token.y) * 0.0022 * queried;
+        }
+
         // Keep them on screen without hard walls.
         if (token.x < 20 || token.x > width - 20) token.vx *= -1;
         if (token.y < 20 || token.y > height - 20) token.vy *= -1;
@@ -290,17 +317,35 @@
         const r = 1.6 + token.weight * 1.6;
         ctx.beginPath();
         ctx.arc(token.x, token.y, r, 0, Math.PI * 2);
-        ctx.fillStyle = withAlpha(accent, 0.2 + proximity * 0.5);
+        ctx.fillStyle = withAlpha(accent, 0.2 + Math.max(proximity, queried) * 0.5);
         ctx.fill();
 
         // Label — only the nearer tokens carry text, otherwise the hero turns
         // into a word cloud.
-        if (proximity > 0.45 && width > 640) {
+        const labelStrength = Math.max(proximity, queried);
+        if (labelStrength > 0.45 && width > 640) {
           ctx.font = `500 10px ui-monospace, SFMono-Regular, Menlo, monospace`;
-          ctx.fillStyle = withAlpha(ink, 0.1 + proximity * 0.42);
+          ctx.fillStyle = withAlpha(ink, 0.1 + labelStrength * 0.42);
           ctx.textBaseline = 'middle';
           ctx.fillText(token.label, token.x + r + 5, token.y);
         }
+      }
+
+      /* — The query indicator —
+         A soft ring at the pointer. Small and low-contrast on purpose: it
+         should read as the retriever noticing you, not as a UI cursor. */
+      if (pointer.active) {
+        const ringR = 15 + 3 * Math.sin(t * 0.004);
+        ctx.beginPath();
+        ctx.arc(pointer.x, pointer.y, ringR, 0, Math.PI * 2);
+        ctx.strokeStyle = withAlpha(accent, 0.34);
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(pointer.x, pointer.y, 2.2, 0, Math.PI * 2);
+        ctx.fillStyle = withAlpha(accent, 0.7);
+        ctx.fill();
       }
 
       /* — The answer node — */
@@ -371,6 +416,52 @@
     };
     window.addEventListener('resize', onResize, { passive: true });
 
+    /* --- Pointer as query ------------------------------------------------
+       Attached only on pointer-fine devices and only when motion is welcome,
+       so touch users see the idle animation and reduced-motion users get the
+       static frame. The canvas is `pointer-events: none`, so this never
+       interferes with the links and buttons layered above it. */
+
+    const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
+    let listening = false;
+
+    const onPointerMove = (event: PointerEvent): void => {
+      const rect = root.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      pointer.x = x;
+      pointer.y = y;
+      pointer.active = x >= 0 && y >= 0 && x <= rect.width && y <= rect.height;
+    };
+
+    const onPointerOut = (event: PointerEvent): void => {
+      // Ignore moves between descendants; only clear when truly leaving.
+      if (event.relatedTarget === null) pointer.active = false;
+    };
+
+    const attachPointer = (): void => {
+      if (listening) return;
+      listening = true;
+      window.addEventListener('pointermove', onPointerMove, { passive: true });
+      window.addEventListener('pointerout', onPointerOut, { passive: true });
+    };
+
+    const detachPointer = (): void => {
+      if (!listening) return;
+      listening = false;
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerout', onPointerOut);
+      pointer.active = false;
+    };
+
+    const syncPointer = (): void => {
+      if (finePointer.matches && !reduced.matches) attachPointer();
+      else detachPointer();
+    };
+
+    finePointer.addEventListener('change', syncPointer);
+    syncPointer();
+
     if (reduced.matches) {
       // Static, fully-formed composition: tokens already converged, one
       // highlighted passage set. No loop, no CPU cost.
@@ -394,6 +485,7 @@
     }
 
     reduced.addEventListener('change', (event) => {
+      syncPointer();
       if (event.matches) {
         stop();
         draw(2200);
