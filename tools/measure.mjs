@@ -542,6 +542,59 @@ async function measurementScript() {
     tooNarrow: measureBlocks.filter((b) => b.charsPerLine < 30),
   };
 
+  /* --- 15. Clipped and overlapping content ---
+     Two layout defects that are invisible to every other check here: text cut
+     off by an overflow container, and interactive controls sitting on top of
+     each other. Both are obvious to a human eye and invisible to a stylesheet. */
+  const clipped = [];
+  for (const el of document.querySelectorAll('*')) {
+    const style = getComputedStyle(el);
+    if (style.overflow !== 'hidden' && style.overflow !== 'clip') continue;
+    if (style.position === 'absolute' || style.position === 'fixed') continue;
+    if (!isVisible(el)) continue;
+    // Only containers that actually hold text of their own.
+    const ownText = [...el.childNodes]
+      .filter((n) => n.nodeType === 3)
+      .map((n) => n.textContent ?? '')
+      .join('')
+      .trim();
+    if (ownText.length === 0) continue;
+    const overflowsY = el.scrollHeight - el.clientHeight;
+    const overflowsX = el.scrollWidth - el.clientWidth;
+    if (overflowsY > 4 || overflowsX > 4) {
+      clipped.push({
+        selector: describe(el),
+        scrollHeight: el.scrollHeight,
+        clientHeight: el.clientHeight,
+        scrollWidth: el.scrollWidth,
+        clientWidth: el.clientWidth,
+        sample: ownText.slice(0, 34),
+      });
+    }
+  }
+
+  const controls = [...document.querySelectorAll('a[href], button, [role="button"]')]
+    .filter((el) => isVisible(el))
+    .map((el) => ({ el, rect: el.getBoundingClientRect(), label: describe(el) }))
+    .filter((c) => c.rect.width > 0 && c.rect.height > 0);
+
+  const overlaps = [];
+  for (let i = 0; i < controls.length; i++) {
+    for (let j = i + 1; j < controls.length; j++) {
+      const a = controls[i];
+      const b = controls[j];
+      // Ignore nesting (a link inside a card that is itself a link target).
+      if (a.el.contains(b.el) || b.el.contains(a.el)) continue;
+      const x = Math.min(a.rect.right, b.rect.right) - Math.max(a.rect.left, b.rect.left);
+      const y = Math.min(a.rect.bottom, b.rect.bottom) - Math.max(a.rect.top, b.rect.top);
+      if (x > 2 && y > 2) {
+        overlaps.push({ a: a.label, b: b.label, overlapX: Math.round(x), overlapY: Math.round(y) });
+      }
+    }
+  }
+
+  const layoutDefects = { clipped, overlappingControls: overlaps.slice(0, 10), overlapCount: overlaps.length };
+
   return {
     viewport: { width: viewportWidth, height: viewportHeight },
     documentWidth: document.documentElement.scrollWidth,
@@ -562,6 +615,7 @@ async function measurementScript() {
     a11y,
     alignment,
     readingMeasure,
+    layoutDefects,
   };
 }
 
@@ -680,6 +734,12 @@ async function main() {
       flags.push(
         `measure>80ch:${data.readingMeasure.tooWide.map((b) => `${b.selector}=${b.charsPerLine}`).join(',')}`,
       );
+    }
+    if (data.layoutDefects?.clipped.length) {
+      flags.push(`CLIPPED:${data.layoutDefects.clipped.map((c) => c.selector).join(',')}`);
+    }
+    if (data.layoutDefects?.overlapCount) {
+      flags.push(`OVERLAP:${data.layoutDefects.overlapCount}`);
     }
     console.log(flags.length ? flags.join(' ') : 'clean');
   }
@@ -1451,6 +1511,16 @@ async function main() {
     console.log(
       `hero pointer: pointer-events=${h.canvasPointerEvents}, canvas animating=${h.animatedWithPointer}, CTA reachable through the canvas=${h.ctaHitTest?.ctaReachable} (top element ${h.ctaHitTest?.topElement})`,
     );
+  }
+  if (sample?.layoutDefects) {
+    const l = sample.layoutDefects;
+    console.log(`layout defects: ${l.clipped.length} clipped text container(s), ${l.overlapCount} overlapping control pair(s)`);
+    for (const c of l.clipped) {
+      console.log(`  clipped ${c.selector} scrollH=${c.scrollHeight} clientH=${c.clientHeight} — "${c.sample}"`);
+    }
+    for (const o of l.overlappingControls) {
+      console.log(`  overlap ${o.a} / ${o.b} by ${o.overlapX}x${o.overlapY}px`);
+    }
   }
 
   cdp.close();
