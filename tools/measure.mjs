@@ -17,7 +17,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, resolve } from 'node:path';
-import { connect, findPageTarget, sleep } from './cdp.mjs';
+import { connect, findPageTarget, navigate, sleep } from './cdp.mjs';
 
 const PORT = process.env.PORT ?? '4321';
 const CDP_PORT = process.env.CDP_PORT ?? '9222';
@@ -918,6 +918,56 @@ async function main() {
     );
   }
 
+  /* --- 7. Print rendering ---
+     People do print academic homepages. Verify the screen chrome is gone,
+     nothing is left hidden by scroll-reveal, and the palette drops to ink. */
+  process.stdout.write('checking print styles … ');
+  await cdp.send('Emulation.setDeviceMetricsOverride', { width: 794, height: 1123, deviceScaleFactor: 1, mobile: false });
+  await cdp.send('Emulation.setEmulatedMedia', { media: 'print', features: [] });
+  {
+    await navigate(cdp, BASE, 900);
+    const { result } = await cdp.send('Runtime.evaluate', {
+      expression: `(() => {
+        const visible = (sel) => {
+          const el = document.querySelector(sel);
+          if (!el) return null;
+          return getComputedStyle(el).display !== 'none';
+        };
+        const hidden = [...document.querySelectorAll('[data-reveal]')]
+          .filter((el) => Number.parseFloat(getComputedStyle(el).opacity) < 0.9).length;
+        return {
+          headerVisible: visible('[data-header]'),
+          vizVisible: visible('[data-viz]'),
+          buttonsVisible: visible('.button'),
+          bodyBg: getComputedStyle(document.body).backgroundColor,
+          bodyColor: getComputedStyle(document.body).color,
+          hiddenReveals: hidden,
+          chars: (document.body.innerText || '').trim().length,
+        };
+      })()`,
+      returnByValue: true,
+    });
+    report.print = result.value;
+
+    const { cssContentSize } = await cdp.send('Page.getLayoutMetrics');
+    const shot = await cdp.send('Page.captureScreenshot', {
+      format: 'png',
+      captureBeyondViewport: true,
+      clip: { x: 0, y: 0, width: 794, height: Math.min(Math.ceil(cssContentSize.height), 12000), scale: 1 },
+    });
+    writeFileSync(join(outDir, 'print.png'), Buffer.from(shot.data, 'base64'));
+
+    const p = result.value;
+    const ok =
+      p.headerVisible === false &&
+      p.vizVisible === false &&
+      p.hiddenReveals === 0 &&
+      p.bodyBg === 'rgb(255, 255, 255)' &&
+      p.bodyColor === 'rgb(0, 0, 0)';
+    console.log(ok ? 'clean' : `PROBLEM (header=${p.headerVisible} viz=${p.vizVisible} hidden=${p.hiddenReveals} bg=${p.bodyBg})`);
+  }
+  await cdp.send('Emulation.setEmulatedMedia', { media: '', features: [] });
+
   writeFileSync(join(outDir, 'report.json'), JSON.stringify(report, null, 2));
 
   /* --- Console summary --- */
@@ -1019,6 +1069,12 @@ async function main() {
     const aligned = a.title.length === 1 && a.content.length === 1 && a.title[0] === a.content[0];
     console.log(
       `alignment: container=${a.container.join(',')} index=${a.index.join(',')} title=${a.title.join(',')} content=${a.content.join(',')}  ${aligned ? '(title and content share a left edge)' : '<-- TITLE/CONTENT EDGE MISMATCH'}`,
+    );
+  }
+  if (report.print) {
+    const p = report.print;
+    console.log(
+      `print: header=${p.headerVisible} viz=${p.vizVisible} buttons=${p.buttonsVisible} hiddenReveals=${p.hiddenReveals} bg=${p.bodyBg} color=${p.bodyColor} chars=${p.chars}`,
     );
   }
 

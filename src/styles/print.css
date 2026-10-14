@@ -1,0 +1,126 @@
+/* ==========================================================================
+   Print
+   Academic homepages get printed — for a CV folder, a supervisor, a meeting.
+   The screen design is not print design: dark surfaces waste ink, the sticky
+   header repeats on every page, and scroll-reveal states would hide content
+   that the printer never scrolls to.
+   ========================================================================== */
+
+@media print {
+  @page {
+    margin: 16mm;
+  }
+
+  /* Force a light, ink-efficient rendering regardless of the chosen theme. */
+  :root,
+  :root[data-theme='dark'] {
+    --paper: #ffffff;
+    --paper-raised: #ffffff;
+    --paper-sunken: #ffffff;
+    --ink: #000000;
+    --ink-strong: #000000;
+    --ink-muted: #333333;
+    --ink-subtle: #3d3d3d;
+    --rule: #c4c4c4;
+    --rule-strong: #9a9a9a;
+    --accent: #000000;
+    --accent-hover: #000000;
+    --accent-wash: #ffffff;
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: none;
+  }
+
+  html {
+    scroll-padding-top: 0;
+  }
+
+  body {
+    font-size: 10.5pt;
+    line-height: 1.5;
+    background: #fff;
+    color: #000;
+  }
+
+  /* --- Decoration that cannot survive paper ---------------------------- */
+
+  .skip-link,
+  .header,
+  .drawer,
+  .viz,
+  .hero__pulse,
+  .hero__links,
+  .button,
+  .contact__copy,
+  .footer__copy,
+  .pub__links {
+    display: none !important;
+  }
+
+  /* The reveal animation is scroll-driven; on paper everything is present. */
+  [data-reveal],
+  [data-reveal='up'] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* --- Layout ---------------------------------------------------------- */
+
+  .hero {
+    min-height: auto;
+    padding-block: 0 var(--space-md);
+  }
+
+  .hero__title {
+    font-size: 24pt;
+    max-width: none;
+  }
+
+  .section {
+    padding-block: 1.1rem;
+  }
+
+  .section--ruled {
+    border-top: 1px solid #ccc;
+  }
+
+  .container {
+    max-width: none;
+    padding-inline: 0;
+  }
+
+  .footer {
+    border-top: 1px solid #ccc;
+    padding-block: 0.8rem;
+  }
+
+  /* Hanging indices would fall off the printable area. */
+  .section-header__index {
+    position: static !important;
+    margin-left: 0 !important;
+    margin-bottom: 0.25rem;
+  }
+
+  /* --- Page-break behaviour -------------------------------------------- */
+
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+  }
+
+  .timeline__item,
+  .pub,
+  .news__item,
+  .award,
+  .exp__item,
+  .area,
+  .empty {
+    break-inside: avoid;
+  }
+
+  a {
+    color: #000;
+    text-decoration: none;
+  }
+}
