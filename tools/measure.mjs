@@ -1182,6 +1182,21 @@ async function main() {
     const withoutPointer = await sampleDelta(false);
     const withPointer = await sampleDelta(true);
 
+    // Capture the hero with the pointer parked over it, as a visual record of
+    // the interaction for human review.
+    {
+      const box = (
+        await cdp.send('Runtime.evaluate', {
+          expression: `(() => { const r = document.querySelector('[data-viz]').getBoundingClientRect(); return { x: Math.round(r.left + r.width * 0.34), y: Math.round(r.top + r.height * 0.42) }; })()`,
+          returnByValue: true,
+        })
+      ).result.value;
+      await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: box.x, y: box.y, buttons: 0 });
+      await sleep(1100);
+      const shot = await cdp.send('Page.captureScreenshot', { format: 'png' });
+      writeFileSync(join(outDir, 'hero-pointer.png'), Buffer.from(shot.data, 'base64'));
+    }
+
     // Confirm the canvas does not intercept clicks over the hero controls.
     const hitTest = (
       await cdp.send('Runtime.evaluate', {
