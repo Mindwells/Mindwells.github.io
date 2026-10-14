@@ -28,6 +28,8 @@ const VIEWPORTS = [
   { name: 'mobile-360', width: 360, height: 780 },
   { name: 'mobile-390', width: 390, height: 844 },
   { name: 'tablet-768', width: 768, height: 1024 },
+  { name: 'laptop-1119', width: 1119, height: 820 },
+  { name: 'laptop-1120', width: 1120, height: 820 },
   { name: 'desktop-1280', width: 1280, height: 900 },
   { name: 'desktop-1440', width: 1440, height: 900 },
   { name: 'wide-1920', width: 1920, height: 1080 },
@@ -494,6 +496,73 @@ async function measurementScript() {
     ctaWithinFirstScreen: cta ? docTop(cta) < window.innerHeight : null,
   };
 
+  /* --- 12. Accessibility structure ---
+     Things a screen reader or keyboard user hits immediately, and which no
+     amount of visual polish compensates for. */
+  const allHeadings = [...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].map((h) => ({
+    level: Number(h.tagName[1]),
+    text: (h.textContent ?? '').trim().slice(0, 40),
+  }));
+  const headingSkips = [];
+  for (let i = 1; i < allHeadings.length; i++) {
+    if (allHeadings[i].level > allHeadings[i - 1].level + 1) {
+      headingSkips.push(`h${allHeadings[i - 1].level} -> h${allHeadings[i].level} at "${allHeadings[i].text}"`);
+    }
+  }
+
+  const ids = [...document.querySelectorAll('[id]')].map((el) => el.id);
+  const duplicateIds = [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))];
+
+  const namelessControls = [...document.querySelectorAll('a[href], button')]
+    .filter((el) => {
+      const hasText = (el.textContent ?? '').trim().length > 0;
+      const hasAria = Boolean(el.getAttribute('aria-label') ?? el.getAttribute('aria-labelledby'));
+      const hasTitle = Boolean(el.getAttribute('title'));
+      const imgAlt = el.querySelector('img[alt]')?.getAttribute('alt');
+      return !hasText && !hasAria && !hasTitle && !Boolean(imgAlt);
+    })
+    .map((el) => el.outerHTML.slice(0, 70));
+
+  const a11y = {
+    htmlLang: document.documentElement.getAttribute('lang'),
+    h1Count: document.querySelectorAll('h1').length,
+    headingSkips,
+    landmarks: {
+      header: document.querySelectorAll('header').length,
+      main: document.querySelectorAll('main').length,
+      footer: document.querySelectorAll('footer').length,
+      nav: document.querySelectorAll('nav').length,
+    },
+    imagesWithoutAlt: [...document.querySelectorAll('img')].filter((i) => !i.hasAttribute('alt')).length,
+    namelessControls,
+    duplicateIds,
+    brokenAnchors: [...document.querySelectorAll('a[href^="#"]')]
+      .map((a) => (a.getAttribute('href') ?? '').slice(1))
+      .filter((fragment, i, arr) => fragment && !document.getElementById(fragment) && arr.indexOf(fragment) === i),
+    skipLink: (() => {
+      const link = document.querySelector('.skip-link');
+      if (!link) return null;
+      return {
+        exists: true,
+        target: link.getAttribute('href'),
+        targetExists: Boolean(document.getElementById((link.getAttribute('href') ?? '').slice(1))),
+      };
+    })(),
+  };
+
+  /* --- 13. Left-edge alignment ---
+     In editorial layout a heading and the content it introduces should share
+     a left edge; a section index hangs outside that edge rather than pushing
+     the heading inward. This measures the actual edges so drift is caught. */
+  const leftEdges = (selector) =>
+    [...document.querySelectorAll(selector)].map((el) => Math.round(el.getBoundingClientRect().left));
+  const alignment = {
+    container: [...new Set(leftEdges('section[id] > .container'))],
+    title: [...new Set(leftEdges('.section-header__title'))],
+    content: [...new Set(leftEdges('section[id] > .container > *:not(.section-header)'))],
+    index: [...new Set(leftEdges('.section-header__index'))],
+  };
+
   return {
     viewport: { width: viewportWidth, height: viewportHeight },
     documentWidth: document.documentElement.scrollWidth,
@@ -511,6 +580,8 @@ async function measurementScript() {
     enhancement,
     viz,
     firstScreen,
+    a11y,
+    alignment,
   };
 }
 
@@ -615,6 +686,15 @@ async function main() {
     }
     if (data.viz && (data.viz.error || data.viz.painted === 0)) {
       flags.push(`VIZ:${data.viz.error ?? 'blank canvas'}`);
+    }
+    if (data.a11y) {
+      if (data.a11y.h1Count !== 1) flags.push(`h1-count:${data.a11y.h1Count}`);
+      if (data.a11y.headingSkips.length) flags.push(`heading-skip:${data.a11y.headingSkips[0]}`);
+      if (data.a11y.namelessControls.length) flags.push(`nameless-controls:${data.a11y.namelessControls.length}`);
+      if (data.a11y.duplicateIds.length) flags.push(`duplicate-ids:${data.a11y.duplicateIds.join(',')}`);
+      if (data.a11y.brokenAnchors.length) flags.push(`broken-anchors:${data.a11y.brokenAnchors.join(',')}`);
+      if (data.a11y.imagesWithoutAlt) flags.push(`img-no-alt:${data.a11y.imagesWithoutAlt}`);
+      if (data.a11y.landmarks.main !== 1) flags.push(`main-landmarks:${data.a11y.landmarks.main}`);
     }
     console.log(flags.length ? flags.join(' ') : 'clean');
   }
@@ -762,6 +842,145 @@ async function main() {
     console.log(ok ? 'clean' : 'PROBLEM');
   }
 
+  /* --- 5. Keyboard: focus is reachable and visibly indicated ---
+     `:focus-visible` only matches after real keyboard interaction, so this
+     drives an actual Tab key through CDP rather than calling .focus(). */
+  process.stdout.write('checking keyboard focus … ');
+  await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+  {
+    const loaded = cdp.once('Page.loadEventFired');
+    await cdp.send('Page.navigate', { url: BASE });
+    await loaded;
+    await sleep(900);
+
+    const pressTab = async () => {
+      for (const type of ['rawKeyDown', 'keyUp']) {
+        await cdp.send('Input.dispatchKeyEvent', {
+          type,
+          key: 'Tab',
+          code: 'Tab',
+          windowsVirtualKeyCode: 9,
+          nativeVirtualKeyCode: 9,
+        });
+      }
+      await sleep(120);
+    };
+
+    const sample = async () =>
+      (
+        await cdp.send('Runtime.evaluate', {
+          expression: `(() => {
+            const el = document.activeElement;
+            if (!el || el === document.body) return null;
+            const style = getComputedStyle(el);
+            const skip = document.querySelector('.skip-link');
+            return {
+              tag: el.tagName.toLowerCase(),
+              label: (el.getAttribute('aria-label') || el.textContent || '').trim().slice(0, 44),
+              outlineWidth: style.outlineWidth,
+              outlineStyle: style.outlineStyle,
+              hasVisibleFocus:
+                style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) > 0,
+              skipLinkVisible: skip
+                ? Math.abs(skip.getBoundingClientRect().top) < skip.getBoundingClientRect().height + 4
+                : null,
+            };
+          })()`,
+          returnByValue: true,
+        })
+      ).result.value;
+
+    const stops = [];
+    for (let i = 0; i < 6; i++) {
+      await pressTab();
+      const s = await sample();
+      if (s) stops.push(s);
+    }
+
+    const withFocusRing = stops.filter((s) => s.hasVisibleFocus).length;
+    report.keyboard = {
+      stops,
+      stopsWithFocusRing: withFocusRing,
+      firstIsSkipLink: stops[0]?.skipLinkVisible === true,
+    };
+    const ok = stops.length > 0 && withFocusRing === stops.length;
+    console.log(ok ? 'clean' : `PROBLEM (${withFocusRing}/${stops.length} have a focus ring)`);
+  }
+
+  /* --- 6. Runtime cost ---
+     Long tasks are the meaningful signal here: headless frame rates are not
+     representative, but main-thread blocking is. */
+  process.stdout.write('checking runtime cost … ');
+  {
+    const loaded = cdp.once('Page.loadEventFired');
+    await cdp.send('Page.navigate', { url: BASE });
+    await loaded;
+    await sleep(1200);
+
+    const { result } = await cdp.send('Runtime.evaluate', {
+      expression: `(async () => {
+        const longTasks = [];
+        try {
+          new PerformanceObserver((list) => {
+            for (const e of list.getEntries()) longTasks.push(Math.round(e.duration));
+          }).observe({ type: 'longtask', buffered: false });
+        } catch (err) {}
+
+        // Scroll the whole document, as a reader would.
+        const behavior = document.documentElement.style.scrollBehavior;
+        document.documentElement.style.scrollBehavior = 'auto';
+        const total = document.documentElement.scrollHeight - window.innerHeight;
+        for (let i = 0; i <= 60; i++) {
+          window.scrollTo(0, (total * i) / 60);
+          await new Promise((r) => setTimeout(r, 16));
+        }
+        await new Promise((r) => setTimeout(r, 400));
+
+        // Confirm the hero canvas pauses when off screen and resumes when
+        // back in view. The signature must cover the whole canvas: the
+        // visualisation is concentrated right-of-centre, so sampling one
+        // corner would report "no change" even while it animates.
+        const canvas = document.querySelector('[data-viz-canvas]');
+        const signature = () => {
+          if (!canvas || !canvas.width) return null;
+          const ctx = canvas.getContext('2d');
+          const d = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+          let sum = 0;
+          for (let i = 3; i < d.length; i += 997) sum += d[i];
+          return sum;
+        };
+        const paused1 = signature();
+        await new Promise((r) => setTimeout(r, 700));
+        const paused2 = signature();
+
+        window.scrollTo(0, 0);
+        document.documentElement.style.scrollBehavior = behavior;
+        await new Promise((r) => setTimeout(r, 500));
+        const running1 = signature();
+        await new Promise((r) => setTimeout(r, 600));
+        const running2 = signature();
+
+        return {
+          longTasks,
+          worstLongTask: longTasks.length ? Math.max(...longTasks) : 0,
+          totalBlocking: longTasks.reduce((a, b) => a + b, 0),
+          canvasPausedOffscreen: paused1 !== null && paused1 === paused2,
+          canvasRunningOnscreen: running1 !== null && running1 !== running2,
+        };
+      })()`,
+      returnByValue: true,
+      awaitPromise: true,
+    });
+    report.runtime = result.value;
+    const r = result.value;
+    const ok = r.worstLongTask < 120 && r.canvasPausedOffscreen && r.canvasRunningOnscreen;
+    console.log(
+      ok
+        ? 'clean'
+        : `PROBLEM (worst=${r.worstLongTask}ms paused=${r.canvasPausedOffscreen} running=${r.canvasRunningOnscreen})`,
+    );
+  }
+
   writeFileSync(join(outDir, 'report.json'), JSON.stringify(report, null, 2));
 
   /* --- Console summary --- */
@@ -836,6 +1055,33 @@ async function main() {
     const d = report.mobileDrawer;
     console.log(
       `mobile drawer: hidden=${d.initiallyHidden} opened=${d.openedHidden === false} expanded=${d.expanded} bodyOverflow="${d.bodyOverflow}" closedOnEsc=${d.closedAfterEscape}`,
+    );
+  }
+  if (sample?.a11y) {
+    const a = sample.a11y;
+    console.log(
+      `a11y: lang=${a.htmlLang} h1=${a.h1Count} headingSkips=${a.headingSkips.length} landmarks(h/m/f/nav)=${a.landmarks.header}/${a.landmarks.main}/${a.landmarks.footer}/${a.landmarks.nav} namelessControls=${a.namelessControls.length} dupIds=${a.duplicateIds.length} brokenAnchors=${a.brokenAnchors.length} skipLink=${a.skipLink?.target}->${a.skipLink?.targetExists}`,
+    );
+  }
+  if (report.keyboard) {
+    console.log(
+      `keyboard: ${report.keyboard.stopsWithFocusRing}/${report.keyboard.stops.length} tab stops show a focus ring; first stop is skip link = ${report.keyboard.firstIsSkipLink}`,
+    );
+    for (const s of report.keyboard.stops.slice(0, 4)) {
+      console.log(`  ↳ ${s.tag} "${s.label}" outline=${s.outlineWidth} ${s.outlineStyle}`);
+    }
+  }
+  if (report.runtime) {
+    const r = report.runtime;
+    console.log(
+      `runtime: worst long task ${r.worstLongTask}ms, total blocking ${r.totalBlocking}ms, ${r.longTasks.length} long tasks; canvas paused off-screen=${r.canvasPausedOffscreen} running on-screen=${r.canvasRunningOnscreen}`,
+    );
+  }
+  if (sample?.alignment) {
+    const a = sample.alignment;
+    const aligned = a.title.length === 1 && a.content.length === 1 && a.title[0] === a.content[0];
+    console.log(
+      `alignment: container=${a.container.join(',')} index=${a.index.join(',')} title=${a.title.join(',')} content=${a.content.join(',')}  ${aligned ? '(title and content share a left edge)' : '<-- TITLE/CONTENT EDGE MISMATCH'}`,
     );
   }
 

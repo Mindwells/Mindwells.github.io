@@ -2,10 +2,19 @@
 /**
  * Section header.
  *
- * The recurring editorial device: a mono-labelled index in the left margin,
- * the display heading, and an optional aside. Using the same skeleton for
- * every section is what makes the page read as *designed* rather than
- * assembled.
+ * The recurring editorial device: a mono section index, the display heading,
+ * and an optional supporting line.
+ *
+ * Layout rule that drives the whole component: **the heading and the content
+ * it introduces share a left edge.** On wide screens the index hangs into the
+ * left margin, outside that edge, so it never pushes the heading inward. Below
+ * the width where a hanging index would crowd the viewport, the index sits on
+ * its own line above the heading — still leaving heading and content aligned.
+ *
+ * The index is baseline-aligned with the heading by placing both in the same
+ * grid area and letting the row's baseline alignment do the work, rather than
+ * faking it with a hand-tuned `top` that would drift whenever the type scale
+ * changes.
  */
 export interface Props {
   /** Two-digit section index, e.g. "01". */
@@ -30,32 +39,18 @@ const { index, title, lede, id } = Astro.props;
 <style>
   .section-header {
     display: grid;
-    grid-template-columns: 4.5rem minmax(0, 1fr);
-    align-items: start;
-    column-gap: var(--space-md);
+    grid-template-columns: minmax(0, 1fr);
     margin-bottom: var(--space-2xl);
   }
 
   .section-header__index {
+    display: block;
     font-family: var(--font-mono);
     font-size: var(--step--2);
     letter-spacing: var(--tracking-meta);
     color: var(--accent);
-    padding-top: 0.85em;
     font-variant-numeric: tabular-nums;
-    position: relative;
-  }
-
-  /* A hairline connecting the index to the heading — a small piece of
-     structure that ties the label to its content at any viewport width. */
-  .section-header__index::after {
-    content: '';
-    position: absolute;
-    top: 0.85em;
-    left: 2.6rem;
-    width: 1.4rem;
-    height: 1px;
-    background: var(--rule-strong);
+    margin-bottom: var(--space-xs);
   }
 
   .section-header__title {
@@ -70,18 +65,30 @@ const { index, title, lede, id } = Astro.props;
     max-width: var(--measure);
   }
 
-  @media (max-width: 640px) {
-    .section-header {
-      grid-template-columns: minmax(0, 1fr);
-      row-gap: var(--space-2xs);
+  /*
+    Wide viewports: hang the index into the margin.
+
+    Both the index and the heading occupy the same grid area, so the heading
+    still starts at the content edge. `align-items: baseline` on the shared row
+    puts the index on the heading's first baseline exactly, at any type size.
+  */
+  @media (min-width: 1120px) {
+    .section-header__index,
+    .section-header__title {
+      grid-area: 1 / 1;
+      align-self: baseline;
     }
 
     .section-header__index {
-      padding-top: 0;
+      justify-self: start;
+      /* Never crowds the viewport edge: the hang shrinks with the gutter. */
+      margin-left: calc(-1 * min(3.25rem, var(--gutter) - 1rem));
+      margin-bottom: 0;
+      white-space: nowrap;
     }
 
-    .section-header__index::after {
-      display: none;
+    .section-header__lede {
+      grid-area: 2 / 1;
     }
   }
 </style>
