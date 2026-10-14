@@ -1,0 +1,109 @@
+name: Design audit
+
+# Runs the automated design audit against the built site.
+#
+# Separate from the deploy workflow on purpose. The audit needs a headless
+# browser, which makes it slower and inherently more fragile than a build, and
+# a flaky browser should never be the reason a deploy fails. It still turns red
+# when it finds something — that signal just does not block publishing. The
+# encoding check, which is fast and deterministic, does gate the deploy.
+
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check the workflows themselves
+        run: npm run check:workflows
+
+      - name: Check encoding
+        run: npm run check:encoding
+
+      - name: Build
+        run: npm run build
+        env:
+          ASTRO_TELEMETRY_DISABLED: 1
+
+      - name: Check icons
+        run: npm run check:icons
+
+      - name: Check for dead CSS
+        run: npm run check:classes
+
+      - name: Start static server
+        run: |
+          npm run serve &
+          # Wait for the server to accept connections.
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4321/ >/dev/null; then break; fi
+            sleep 1
+          done
+
+      - name: Start headless browser with remote debugging
+        run: |
+          google-chrome \
+            --headless=new \
+            --disable-gpu \
+            --no-sandbox \
+            --no-first-run \
+            --no-default-browser-check \
+            --remote-debugging-port=9222 \
+            --user-data-dir=/tmp/audit-profile \
+            about:blank &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:9222/json/version >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:9222/json/version
+
+      - name: Run design audit
+        id: audit
+        run: node tools/measure.mjs
+        env:
+          PORT: 4321
+          CDP_PORT: 9222
+        continue-on-error: true
+
+      - name: Run audit self-test
+        id: selftest
+        run: node tools/selftest.mjs
+        env:
+          PORT: 4321
+          CDP_PORT: 9222
+        continue-on-error: true
+
+      - name: Upload audit report and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: design-audit
+          if-no-files-found: ignore
+          path: |
+            .audit/report.json
+            .audit/*.png
+            .audit/*.txt
+          retention-days: 14
+
+      - name: Fail if the audit found problems
+        if: steps.audit.outcome == 'failure' || steps.selftest.outcome == 'failure'
+        run: |
+          echo "The design audit or its self-test reported failures."
+          echo "Download the 'design-audit' artifact for report.json and screenshots."
+          exit 1

@@ -1,0 +1,146 @@
+/* ==========================================================================
+   Layout primitives and shared utilities.
+   Small, composable classes rather than a utility soup: each one encodes a
+   layout decision (measure, rhythm, grid) that the whole site shares.
+   ========================================================================== */
+
+/* --- Container ---------------------------------------------------------- */
+
+.container {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+/* --- Section rhythm ----------------------------------------------------- */
+
+.section {
+  padding-block: var(--section-y);
+  position: relative;
+}
+
+.section--tight {
+  padding-block: var(--section-y-tight);
+}
+
+.section--ruled {
+  border-top: 1px solid var(--rule);
+}
+
+/* --- Editorial 12-column grid ------------------------------------------- */
+/* Content sits in columns 1–7, metadata in 8–12. That asymmetry is the
+   backbone of the layout: it gives every section a consistent "ledger"
+   feel rather than a centred stack. */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--gutter);
+  row-gap: var(--space-lg);
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.col-main {
+  grid-column: 1 / span 7;
+}
+
+.col-aside {
+  grid-column: 8 / span 5;
+}
+
+@media (max-width: 900px) {
+  .col-main,
+  .col-aside {
+    grid-column: 1 / -1;
+  }
+}
+
+/* --- Metadata / label typography ---------------------------------------- */
+
+.label {
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--ink-subtle);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  letter-spacing: 0;
+}
+
+/* --- Accessibility ------------------------------------------------------ */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  top: var(--space-sm);
+  left: var(--space-sm);
+  z-index: var(--z-skip);
+  padding: var(--space-xs) var(--space-md);
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: var(--radius-md);
+  font-size: var(--step--1);
+  font-weight: 500;
+  transform: translateY(-200%);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+  color: var(--paper);
+}
+
+/* --- Scroll reveal ------------------------------------------------------ */
+/* Elements start hidden only when JS is available to reveal them; the
+   `js` class is set by an inline script so no-JS users see everything. */
+
+.js [data-reveal] {
+  opacity: 0;
+  will-change: opacity, transform;
+}
+
+.js [data-reveal='up'] {
+  transform: translate3d(0, 1.25rem, 0);
+}
+
+.js [data-reveal].is-revealed {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--dur-reveal) var(--ease-out),
+    transform var(--dur-reveal) var(--ease-out);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js [data-reveal],
+  .js [data-reveal='up'] {
+    opacity: 1;
+    transform: none;
+  }
+}

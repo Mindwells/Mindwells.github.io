@@ -1,0 +1,22 @@
+{
+  "name": "Yuan Zhou — Homepage",
+  "short_name": "Yuan Zhou",
+  "description": "Incoming M.S. student at Dalian University of Technology working on retrieval-augmented generation and large language model reasoning.",
+  "start_url": "/",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/images/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#faf9f7",
+  "background_color": "#faf9f7",
+  "display": "standalone"
+}

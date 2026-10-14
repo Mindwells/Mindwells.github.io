@@ -1,0 +1,95 @@
+---
+/**
+ * Section header.
+ *
+ * The recurring editorial device: a mono section index, the display heading,
+ * and an optional supporting line.
+ *
+ * Layout rule that drives the whole component: **the heading and the content
+ * it introduces share a left edge.** On wide screens the index hangs into the
+ * left margin, outside that edge, so it never pushes the heading inward. Below
+ * the width where a hanging index would crowd the viewport, the index sits on
+ * its own line above the heading — still leaving heading and content aligned.
+ *
+ * The index and the heading must be *siblings* for the hanging layout to work:
+ * they share a grid area, and the row's baseline alignment puts the index on
+ * the heading's first baseline at any type size. An earlier version nested the
+ * heading inside a body wrapper, so the grid placement silently applied to an
+ * element that was not a grid item and the index sat on its own row at every
+ * width — the stacked layout, wearing the hanging layout's clothes.
+ */
+export interface Props {
+  /** Two-digit section index, e.g. "01". */
+  index: string;
+  title: string;
+  /** Optional supporting line under the title. */
+  lede?: string;
+  id?: string;
+}
+
+const { index, title, lede, id } = Astro.props;
+---
+
+<header class="section-header" data-reveal="up">
+  <span class="section-header__index" aria-hidden="true">{index}</span>
+  <h2 class="section-header__title" id={id ? `${id}-title` : undefined}>{title}</h2>
+  {lede && <p class="section-header__lede">{lede}</p>}
+</header>
+
+<style>
+  .section-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    margin-bottom: var(--space-2xl);
+  }
+
+  /* Stacked by default: the index sits on its own line above the heading. */
+  .section-header__index {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: var(--step--2);
+    letter-spacing: var(--tracking-meta);
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: var(--space-xs);
+  }
+
+  .section-header__title {
+    font-size: var(--step-4);
+    margin: 0;
+  }
+
+  .section-header__lede {
+    margin-top: var(--space-sm);
+    color: var(--ink-muted);
+    font-size: var(--step-0);
+    max-width: var(--measure);
+  }
+
+  /*
+    Wide viewports: index and heading occupy the *same* grid area, so the
+    heading still starts at the content edge and the index hangs outside it.
+    `align-self: baseline` on the shared row puts the index on the heading's
+    first baseline exactly, rather than at a hand-tuned offset that would drift
+    with the type scale.
+  */
+  @media (min-width: 1120px) {
+    .section-header__index,
+    .section-header__title {
+      grid-area: 1 / 1;
+      align-self: baseline;
+    }
+
+    .section-header__index {
+      justify-self: start;
+      /* Never crowds the viewport edge: the hang shrinks with the gutter. */
+      margin-left: calc(-1 * min(3.25rem, var(--gutter) - 1rem));
+      margin-bottom: 0;
+      white-space: nowrap;
+    }
+
+    .section-header__lede {
+      grid-area: 2 / 1;
+    }
+  }
+</style>

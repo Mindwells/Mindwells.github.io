@@ -1,0 +1,503 @@
+---
+/**
+ * Hero retrieval visualisation.
+ *
+ * A literal picture of the research: a query is decomposed into tokens, the
+ * tokens scatter across an embedding space, a few passages light up as
+ * retrieved evidence, and the evidence collapses into a single answered
+ * point. It is decorative in the sense that the page works without it — but
+ * it is the one piece of motion that states what the work is about.
+ *
+ * Rendered to a 2D canvas rather than WebGL: a few hundred primitives at
+ * 30–60fps costs nothing, the payload is ~4KB, and there is no context-loss
+ * or fallback story to maintain.
+ */
+---
+
+<div class="viz" data-viz aria-hidden="true">
+  <canvas class="viz__canvas" data-viz-canvas></canvas>
+</div>
+
+<style>
+  .viz {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    /* Fades the field out toward the edges so it never fights the type. */
+    mask-image: radial-gradient(120% 90% at 78% 34%, #000 0%, #000 46%, transparent 82%);
+    -webkit-mask-image: radial-gradient(120% 90% at 78% 34%, #000 0%, #000 46%, transparent 82%);
+  }
+
+  .viz__canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  @media (max-width: 900px) {
+    .viz {
+      /* On phones the hero is type-led; a faint field behind the text only
+         adds noise, so it is dimmed rather than removed (removal would make
+         the mobile layout feel like a different site). */
+      opacity: 0.5;
+      mask-image: radial-gradient(120% 70% at 50% 12%, #000 0%, transparent 78%);
+      -webkit-mask-image: radial-gradient(120% 70% at 50% 12%, #000 0%, transparent 78%);
+    }
+  }
+</style>
+
+<script>
+  type Token = {
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    label: string;
+    weight: number;
+    /** 0 = drifting freely, 1 = pulled into the answer */
+    pull: number;
+  };
+
+  type Passage = {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    /** Highlight envelope, 0 → 1 → 0 */
+    glow: number;
+    phase: number;
+    lines: number;
+  };
+
+  const QUERY_TOKENS = ['retrieval', 'evidence', 'rank', 'cite', 'reason', 'chunk', 'verify'];
+
+  function init(): void {
+    const canvas = document.querySelector<HTMLCanvasElement>('[data-viz-canvas]');
+    const root = document.querySelector<HTMLElement>('[data-viz]');
+    if (!canvas || !root) return;
+
+    const ctx = canvas.getContext('2d', { alpha: true });
+    if (!ctx) return;
+
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    let width = 0;
+    let height = 0;
+    let dpr = 1;
+    let tokens: Token[] = [];
+    let passages: Passage[] = [];
+    let frame = 0;
+    let running = false;
+
+    /**
+     * The visitor's pointer, treated as a live query.
+     *
+     * Retrieval is the subject of this site, so the visualisation responds to
+     * the pointer the way a retriever responds to a query: passages near the
+     * pointer become relevant, evidence lines connect them to it, and tokens
+     * drift toward it. Idle behaviour is unchanged when the pointer is away,
+     * and pointer-fine only — there is no hover on touch.
+     */
+    const pointer = { x: 0, y: 0, active: false };
+
+    /** 1 at the pointer, falling to 0 at `radius`. */
+    const proximityToPointer = (x: number, y: number, radius: number): number => {
+      if (!pointer.active) return 0;
+      const distance = Math.hypot(x - pointer.x, y - pointer.y);
+      return Math.max(0, 1 - distance / radius);
+    };
+
+    /* --- Geometry ------------------------------------------------------ */
+
+    const resize = (): void => {
+      const rect = root.getBoundingClientRect();
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      width = Math.max(rect.width, 1);
+      height = Math.max(rect.height, 1);
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      seed();
+    };
+
+    /** Origin of the "answer" — where evidence converges. */
+    const answerPoint = () => ({ x: width * 0.78, y: height * 0.4 });
+
+    const seed = (): void => {
+      const origin = answerPoint();
+      const count = width < 700 ? 9 : 16;
+
+      tokens = Array.from({ length: count }, (_, i) => {
+        const angle = (i / count) * Math.PI * 2 + Math.random() * 0.5;
+        const radius = Math.min(width, height) * (0.24 + Math.random() * 0.3);
+        return {
+          x: origin.x + Math.cos(angle) * radius,
+          y: origin.y + Math.sin(angle) * radius,
+          vx: (Math.random() - 0.5) * 0.16,
+          vy: (Math.random() - 0.5) * 0.16,
+          label: QUERY_TOKENS[i % QUERY_TOKENS.length]!,
+          weight: 0.3 + Math.random() * 0.7,
+          pull: Math.random(),
+        };
+      });
+
+      const pCount = width < 700 ? 4 : 7;
+      passages = Array.from({ length: pCount }, (_, i) => {
+        const angle = (i / pCount) * Math.PI * 2 + 0.7;
+        const radius = Math.min(width, height) * (0.2 + Math.random() * 0.24);
+        const w = 44 + Math.random() * 30;
+        return {
+          x: origin.x + Math.cos(angle) * radius,
+          y: origin.y + Math.sin(angle) * radius,
+          w,
+          h: w * 0.68,
+          glow: 0,
+          phase: Math.random() * Math.PI * 2,
+          lines: 3 + Math.floor(Math.random() * 3),
+        };
+      });
+    };
+
+    /* --- Palette ------------------------------------------------------- */
+    /* Read live from CSS so the visualisation follows the theme instead of
+       hard-coding colour values that would drift out of sync. */
+
+    const readColor = (name: string, fallback: string): string => {
+      const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      return value || fallback;
+    };
+
+    let accent = '#2f4a8c';
+    let ink = '#14161a';
+    let rule = '#e3e0da';
+
+    const refreshPalette = (): void => {
+      accent = readColor('--accent', accent);
+      ink = readColor('--ink', ink);
+      rule = readColor('--rule', rule);
+    };
+
+    /* --- Drawing ------------------------------------------------------- */
+
+    const roundRect = (x: number, y: number, w: number, h: number, r: number): void => {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    };
+
+    /** Convert a hex/rgb token into an rgba() string at the given alpha. */
+    const withAlpha = (color: string, alpha: number): string => {
+      const value = color.trim();
+      if (value.startsWith('#')) {
+        let hex = value.slice(1);
+        if (hex.length === 3) hex = hex.split('').map((c) => c + c).join('');
+        const num = Number.parseInt(hex, 16);
+        const r = (num >> 16) & 255;
+        const g = (num >> 8) & 255;
+        const b = num & 255;
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      }
+      const match = value.match(/rgba?\(([^)]+)\)/);
+      if (match) {
+        const parts = match[1]!.split(',').map((p) => Number.parseFloat(p));
+        return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${alpha})`;
+      }
+      return value;
+    };
+
+    const draw = (t: number): void => {
+      ctx.clearRect(0, 0, width, height);
+      const origin = answerPoint();
+
+      // Cycle length in ms — long enough to read, short enough to notice.
+      const period = 11000;
+      const phase = (t % period) / period;
+
+      // Envelope: gather (0 → .35), hold (.35 → .8), release (.8 → 1)
+      const gather = phase < 0.35 ? phase / 0.35 : phase > 0.8 ? 1 - (phase - 0.8) / 0.2 : 1;
+
+      /* — Passages — */
+      for (const p of passages) {
+        p.phase += 0.012;
+        const local = 0.5 + 0.5 * Math.sin(p.phase);
+        const bob = Math.sin(p.phase * 0.6) * 3;
+        // Relevance is the passage's own cycle, lifted by pointer proximity.
+        const queried = proximityToPointer(p.x, p.y + bob, 260);
+        p.glow = Math.min(1, local * gather + queried * 0.55);
+
+        ctx.save();
+        ctx.translate(p.x, p.y + bob);
+
+        roundRect(-p.w / 2, -p.h / 2, p.w, p.h, 3);
+        ctx.fillStyle = withAlpha(rule, 0.5 + p.glow * 0.22);
+        ctx.fill();
+        ctx.strokeStyle = withAlpha(accent, 0.14 + p.glow * 0.5);
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Text lines inside the "passage" — the amount of fill suggests how
+        // much of the passage is relevant.
+        const lineGap = 4.2;
+        const startY = -p.h / 2 + 6.5;
+        for (let i = 0; i < p.lines; i++) {
+          const ly = startY + i * lineGap;
+          if (ly > p.h / 2 - 4) break;
+          const relevance = Math.max(0, 1 - i / p.lines);
+          const lw = (p.w - 12) * (0.55 + 0.4 * relevance) * (0.5 + 0.5 * p.glow);
+          ctx.beginPath();
+          ctx.moveTo(-p.w / 2 + 6, ly);
+          ctx.lineTo(-p.w / 2 + 6 + lw, ly);
+          ctx.strokeStyle = withAlpha(
+            i === 0 ? accent : ink,
+            0.1 + relevance * p.glow * 0.45,
+          );
+          ctx.lineWidth = 1.4;
+          ctx.lineCap = 'round';
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      }
+
+      /* — Retrieval edges: passage → answer — */
+      for (const p of passages) {
+        if (p.glow < 0.06) continue;
+        const bob = Math.sin(p.phase * 0.6) * 3;
+        const fromX = p.x;
+        const fromY = p.y + bob;
+        const midX = (fromX + origin.x) / 2;
+        const midY = (fromY + origin.y) / 2 - 14;
+
+        ctx.beginPath();
+        ctx.moveTo(fromX, fromY);
+        ctx.quadraticCurveTo(midX, midY, origin.x, origin.y);
+        ctx.strokeStyle = withAlpha(accent, p.glow * 0.28 * gather);
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 5]);
+        ctx.lineDashOffset = -(t * 0.012) % 8;
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      /* — Tokens — */
+      for (const token of tokens) {
+        // Free drift, damped as the tokens converge.
+        const drift = 1 - gather * 0.85;
+        token.x += token.vx * drift;
+        token.y += token.vy * drift;
+
+        // Soft pull toward the answer point.
+        const targetStrength = 0.0016 * gather * token.pull;
+        token.x += (origin.x - token.x) * targetStrength;
+        token.y += (origin.y - token.y) * targetStrength;
+
+        // A gentler pull toward the pointer, so query tokens gather around
+        // the cursor as if it were the query itself.
+        const queried = proximityToPointer(token.x, token.y, 300);
+        if (queried > 0) {
+          token.x += (pointer.x - token.x) * 0.0022 * queried;
+          token.y += (pointer.y - token.y) * 0.0022 * queried;
+        }
+
+        // Keep them on screen without hard walls.
+        if (token.x < 20 || token.x > width - 20) token.vx *= -1;
+        if (token.y < 20 || token.y > height - 20) token.vy *= -1;
+
+        const distance = Math.hypot(origin.x - token.x, origin.y - token.y);
+        const proximity = Math.max(0, 1 - distance / (Math.min(width, height) * 0.6));
+
+        // Node
+        const r = 1.6 + token.weight * 1.6;
+        ctx.beginPath();
+        ctx.arc(token.x, token.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = withAlpha(accent, 0.2 + Math.max(proximity, queried) * 0.5);
+        ctx.fill();
+
+        // Label — only the nearer tokens carry text, otherwise the hero turns
+        // into a word cloud.
+        const labelStrength = Math.max(proximity, queried);
+        if (labelStrength > 0.45 && width > 640) {
+          ctx.font = `500 10px ui-monospace, SFMono-Regular, Menlo, monospace`;
+          ctx.fillStyle = withAlpha(ink, 0.1 + labelStrength * 0.42);
+          ctx.textBaseline = 'middle';
+          ctx.fillText(token.label, token.x + r + 5, token.y);
+        }
+      }
+
+      /* — The query indicator —
+         A soft ring at the pointer. Small and low-contrast on purpose: it
+         should read as the retriever noticing you, not as a UI cursor. */
+      if (pointer.active) {
+        const ringR = 15 + 3 * Math.sin(t * 0.004);
+        ctx.beginPath();
+        ctx.arc(pointer.x, pointer.y, ringR, 0, Math.PI * 2);
+        ctx.strokeStyle = withAlpha(accent, 0.34);
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(pointer.x, pointer.y, 2.2, 0, Math.PI * 2);
+        ctx.fillStyle = withAlpha(accent, 0.7);
+        ctx.fill();
+      }
+
+      /* — The answer node — */
+      const pulse = 0.5 + 0.5 * Math.sin(t * 0.0016);
+      const coreR = 4.5 + pulse * 1.6 + gather * 2.2;
+
+      const halo = ctx.createRadialGradient(origin.x, origin.y, 0, origin.x, origin.y, 74);
+      halo.addColorStop(0, withAlpha(accent, 0.16 * (0.4 + gather * 0.6)));
+      halo.addColorStop(1, withAlpha(accent, 0));
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(origin.x, origin.y, 74, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(origin.x, origin.y, coreR, 0, Math.PI * 2);
+      ctx.fillStyle = withAlpha(accent, 0.75 + gather * 0.25);
+      ctx.fill();
+
+      // Expanding ring marks each convergence.
+      const ringPhase = phase > 0.3 && phase < 0.85 ? (phase - 0.3) / 0.55 : -1;
+      if (ringPhase >= 0) {
+        const rr = coreR + ringPhase * 52;
+        ctx.beginPath();
+        ctx.arc(origin.x, origin.y, rr, 0, Math.PI * 2);
+        ctx.strokeStyle = withAlpha(accent, (1 - ringPhase) * 0.3);
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    };
+
+    /* --- Loop ---------------------------------------------------------- */
+
+    const loop = (): void => {
+      if (!running) return;
+      draw(performance.now());
+      frame = requestAnimationFrame(loop);
+    };
+
+    const start = (): void => {
+      if (running) return;
+      running = true;
+      frame = requestAnimationFrame(loop);
+    };
+
+    const stop = (): void => {
+      running = false;
+      cancelAnimationFrame(frame);
+    };
+
+    /* --- Wiring -------------------------------------------------------- */
+
+    resize();
+    refreshPalette();
+
+    const themeObserver = new MutationObserver(refreshPalette);
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', refreshPalette);
+
+    let resizeTimer = 0;
+    const onResize = (): void => {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(resize, 150);
+    };
+    window.addEventListener('resize', onResize, { passive: true });
+
+    /* --- Pointer as query ------------------------------------------------
+       Attached only on pointer-fine devices and only when motion is welcome,
+       so touch users see the idle animation and reduced-motion users get the
+       static frame. The canvas is `pointer-events: none`, so this never
+       interferes with the links and buttons layered above it. */
+
+    const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
+    let listening = false;
+
+    const onPointerMove = (event: PointerEvent): void => {
+      const rect = root.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      pointer.x = x;
+      pointer.y = y;
+      pointer.active = x >= 0 && y >= 0 && x <= rect.width && y <= rect.height;
+    };
+
+    const onPointerOut = (event: PointerEvent): void => {
+      // Ignore moves between descendants; only clear when truly leaving.
+      if (event.relatedTarget === null) pointer.active = false;
+    };
+
+    const attachPointer = (): void => {
+      if (listening) return;
+      listening = true;
+      window.addEventListener('pointermove', onPointerMove, { passive: true });
+      window.addEventListener('pointerout', onPointerOut, { passive: true });
+    };
+
+    const detachPointer = (): void => {
+      if (!listening) return;
+      listening = false;
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerout', onPointerOut);
+      pointer.active = false;
+    };
+
+    const syncPointer = (): void => {
+      if (finePointer.matches && !reduced.matches) attachPointer();
+      else detachPointer();
+    };
+
+    finePointer.addEventListener('change', syncPointer);
+    syncPointer();
+
+    if (reduced.matches) {
+      // Static, fully-formed composition: tokens already converged, one
+      // highlighted passage set. No loop, no CPU cost.
+      draw(2200);
+    } else {
+      // Only animate while the hero is actually on screen.
+      if ('IntersectionObserver' in window) {
+        new IntersectionObserver(
+          ([entry]) => (entry?.isIntersecting ? start() : stop()),
+          { threshold: 0 },
+        ).observe(root);
+      } else {
+        start();
+      }
+
+      // Pause when the tab is hidden — nothing is watching.
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) stop();
+        else start();
+      });
+    }
+
+    reduced.addEventListener('change', (event) => {
+      syncPointer();
+      if (event.matches) {
+        stop();
+        draw(2200);
+      } else {
+        start();
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+  } else {
+    init();
+  }
+</script>

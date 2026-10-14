@@ -1,0 +1,217 @@
+---
+import Icon from './ui/Icon.astro';
+import type { TimelineEntry } from '../data/education';
+
+/**
+ * Vertical timeline.
+ *
+ * The line is drawn as a border on the list rather than an absolutely
+ * positioned pseudo-element, so it can never drift out of alignment with the
+ * markers at any viewport width or text size.
+ */
+export interface Props {
+  entries: TimelineEntry[];
+}
+
+const { entries } = Astro.props;
+---
+
+<ol class="timeline">
+  {
+    entries.map((entry, i) => (
+      <li
+        class:list={['timeline__item', { 'timeline__item--current': entry.current }]}
+        data-reveal="up"
+        data-reveal-delay={i * 90}
+      >
+        <div class="timeline__marker" aria-hidden="true">
+          <span class="timeline__dot" />
+        </div>
+
+        <div class="timeline__body">
+          <p class="timeline__period mono">{entry.period}</p>
+
+          <h3 class="timeline__institution">
+            {entry.institution}
+            <span class="timeline__abbr" aria-hidden="true">{entry.abbr}</span>
+          </h3>
+
+          <p class="timeline__degree">{entry.degree}</p>
+
+          <dl class="timeline__facts">
+            {entry.detail && (
+              <>
+                <dt class="visually-hidden">Department</dt>
+                <dd>
+                  <Icon name="book" size={14} />
+                  <span>{entry.detail}</span>
+                </dd>
+              </>
+            )}
+            {entry.location && (
+              <>
+                <dt class="visually-hidden">Location</dt>
+                <dd>
+                  <Icon name="pin" size={14} />
+                  <span>{entry.location}</span>
+                </dd>
+              </>
+            )}
+            {entry.note && (
+              <>
+                <dt class="visually-hidden">Note</dt>
+                <dd class="timeline__note">
+                  <Icon name="graduation" size={14} />
+                  <span>{entry.note}</span>
+                </dd>
+              </>
+            )}
+          </dl>
+        </div>
+      </li>
+    ))
+  }
+</ol>
+
+<style>
+  .timeline {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .timeline__item {
+    display: grid;
+    grid-template-columns: 1.75rem minmax(0, 1fr);
+    column-gap: var(--space-md);
+    padding-bottom: var(--space-2xl);
+    position: relative;
+  }
+
+  .timeline__item:last-child {
+    padding-bottom: 0;
+  }
+
+  /* Marker column keeps the rule continuous between items. */
+  .timeline__marker {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    padding-top: 0.42rem;
+  }
+
+  .timeline__item:not(:last-child) .timeline__marker::after {
+    content: '';
+    position: absolute;
+    top: 1.1rem;
+    bottom: calc(var(--space-2xl) * -1);
+    left: 50%;
+    width: 1px;
+    transform: translateX(-50%);
+    background: var(--rule);
+  }
+
+  .timeline__dot {
+    width: 9px;
+    height: 9px;
+    border-radius: var(--radius-full);
+    background: var(--paper);
+    border: 1.5px solid var(--rule-strong);
+    position: relative;
+    z-index: 1;
+    transition:
+      border-color var(--dur-base) var(--ease-out),
+      transform var(--dur-base) var(--ease-spring);
+  }
+
+  .timeline__item--current .timeline__dot {
+    border-color: var(--accent);
+    background: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-wash);
+  }
+
+  .timeline__body:hover .timeline__dot {
+    transform: scale(1.18);
+  }
+
+  .timeline__item:hover .timeline__dot {
+    border-color: var(--accent);
+  }
+
+  .timeline__period {
+    color: var(--ink-subtle);
+    font-size: var(--step--2);
+    letter-spacing: var(--tracking-meta);
+    margin-bottom: var(--space-2xs);
+    font-variant-numeric: tabular-nums;
+    max-width: none;
+  }
+
+  .timeline__item--current .timeline__period {
+    color: var(--accent);
+  }
+
+  .timeline__institution {
+    font-size: var(--step-2);
+    margin: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  .timeline__abbr {
+    font-family: var(--font-mono);
+    font-size: var(--step--2);
+    letter-spacing: var(--tracking-meta);
+    color: var(--ink-subtle);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-sm);
+    padding: 0.05rem 0.35rem;
+    text-transform: uppercase;
+  }
+
+  .timeline__degree {
+    margin-top: 0.3rem;
+    color: var(--ink);
+    font-size: var(--step-0);
+    max-width: none;
+  }
+
+  .timeline__facts {
+    margin: var(--space-sm) 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .timeline__facts dd {
+    margin: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    color: var(--ink-muted);
+    font-size: var(--step--1);
+  }
+
+  .timeline__facts :global(svg) {
+    flex-shrink: 0;
+    transform: translateY(2px);
+    color: var(--ink-subtle);
+  }
+
+  .timeline__note {
+    color: var(--ink) !important;
+  }
+
+  .timeline__note :global(svg) {
+    color: var(--accent) !important;
+  }
+
+  @media (max-width: 640px) {
+    .timeline__item {
+      grid-template-columns: 1.25rem minmax(0, 1fr);
+      column-gap: var(--space-sm);
+    }
+  }
+</style>

@@ -1,0 +1,167 @@
+---
+import Icon from './ui/Icon.astro';
+
+/**
+ * Dated news list.
+ *
+ * Date in the left column, everything else to the right — the same ledger
+ * logic as the rest of the page. Hovering raises the whole row rather than
+ * just the link, so the target is generous.
+ */
+export interface NewsItem {
+  date: Date;
+  title: string;
+  tag?: string;
+  href?: string;
+  /**
+   * The entry's Markdown body, already rendered to a component. Astro types
+   * `render()` as `any`, so this follows suit rather than inventing a shape.
+   */
+  Content?: any;
+}
+
+export interface Props {
+  items: NewsItem[];
+}
+
+const { items } = Astro.props;
+
+const formatter = new Intl.DateTimeFormat('en-CA', {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  timeZone: 'UTC',
+});
+
+const sorted = [...items].sort((a, b) => b.date.getTime() - a.date.getTime());
+---
+
+<ol class="news">
+  {
+    sorted.map((item, i) => {
+      const iso = formatter.format(item.date);
+      const Wrapper = item.href ? 'a' : 'div';
+      return (
+        <li class="news__item" data-reveal="up" data-reveal-delay={Math.min(i, 6) * 70}>
+          <Wrapper
+            class="news__row"
+            {...(item.href
+              ? { href: item.href, target: '_blank', rel: 'noopener noreferrer' }
+              : {})}
+          >
+            <time class="news__date mono" datetime={iso}>
+              {iso}
+            </time>
+
+            <div class="news__body">
+              <p class="news__title">
+                {item.title}
+                {item.href && (
+                  <span class="news__arrow" aria-hidden="true">
+                    <Icon name="arrowUpRight" size={14} />
+                  </span>
+                )}
+              </p>
+              {item.Content && (
+                <div class="news__text prose prose--compact">
+                  <item.Content />
+                </div>
+              )}
+            </div>
+
+            {item.tag && <span class="news__tag mono">{item.tag}</span>}
+          </Wrapper>
+        </li>
+      );
+    })
+  }
+</ol>
+
+<style>
+  .news {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .news__item {
+    border-top: 1px solid var(--rule);
+  }
+
+  .news__item:last-child {
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .news__row {
+    display: grid;
+    grid-template-columns: 7.5rem minmax(0, 1fr) auto;
+    align-items: baseline;
+    column-gap: var(--space-md);
+    padding: var(--space-md) var(--space-sm);
+    margin-inline: calc(var(--space-sm) * -1);
+    border-radius: var(--radius-md);
+    color: var(--ink);
+    transition: background-color var(--dur-base) var(--ease-out);
+  }
+
+  .news__row:hover {
+    background: color-mix(in srgb, var(--paper-sunken) 65%, transparent);
+    color: var(--ink);
+  }
+
+  .news__date {
+    color: var(--ink-subtle);
+    font-size: var(--step--2);
+    letter-spacing: var(--tracking-meta);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .news__title {
+    font-size: var(--step-0);
+    color: var(--ink);
+    max-width: none;
+    display: inline;
+  }
+
+  .news__arrow {
+    display: inline-block;
+    margin-left: 0.4rem;
+    color: var(--accent);
+    opacity: 0;
+    transform: translate(-3px, 3px);
+    transition:
+      opacity var(--dur-fast) var(--ease-out),
+      transform var(--dur-base) var(--ease-out);
+  }
+
+  .news__row:hover .news__arrow {
+    opacity: 1;
+    transform: none;
+  }
+
+  .news__text {
+    margin-top: 0.3rem;
+  }
+
+  .news__tag {
+    color: var(--ink-subtle);
+    font-size: var(--step--2);
+    letter-spacing: var(--tracking-meta);
+    text-transform: uppercase;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-sm);
+    padding: 0.1rem 0.4rem;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 720px) {
+    .news__row {
+      grid-template-columns: minmax(0, 1fr);
+      row-gap: 0.35rem;
+    }
+
+    .news__tag {
+      justify-self: start;
+    }
+  }
+</style>

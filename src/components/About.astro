@@ -1,0 +1,245 @@
+---
+import Icon from './ui/Icon.astro';
+import { profile } from '../data/profile';
+
+/**
+ * About section.
+ *
+ * The prose is the site owner's own bio, kept verbatim — this is the only
+ * place it appears; the hero used to repeat its opening sentence. A small
+ * "at a glance" fact box frames it, and an optional portrait sits above.
+ */
+---
+
+<div class="about grid">
+  <div class="about__prose col-main">
+    <!--
+      These paragraphs are the site owner's own bio, kept verbatim. The
+      layout can change freely; the wording is his.
+    -->
+    <p class="about__lede">
+      I am an incoming Master's student at the <strong>School of Computer Science and Technology,
+      Dalian University of Technology (DUT)</strong>, where I am fortunate to be advised by
+      <strong>Assistant Professor Jihao Shi</strong>.
+    </p>
+
+    <p class="about__text">
+      Prior to that, I received my B.S. degree in Computer Science and Technology from the
+      <strong>School of Computer Science and Artificial Intelligence, Wuhan University of Technology
+      (WUT)</strong> in 2026.
+    </p>
+
+    <p class="about__text">My research interests lie in <strong>Natural Language Processing (NLP)</strong>, with a particular focus on:</p>
+
+    <ul class="about__interests">
+      <li>Retrieval-Augmented Generation (RAG)</li>
+      <li>Large Language Model Reasoning</li>
+    </ul>
+  </div>
+
+  <aside class="about__aside col-aside">
+    {
+      /*
+       * Portrait, rendered only when one is configured. Declaring the slot in
+       * three places while rendering it in none meant that filling in
+       * `profile.avatar.src` silently did nothing. Width and height are set so
+       * the space is reserved before the image loads and nothing shifts.
+       */
+      profile.avatar.src && (
+        <figure class="portrait">
+          <img
+            src={profile.avatar.src}
+            alt={profile.avatar.alt}
+            width="720"
+            height="900"
+            loading="lazy"
+            decoding="async"
+          />
+        </figure>
+      )
+    }
+
+    <!--
+      The fact box frames the bio in a scannable form.
+
+      It deliberately stops there: it used to repeat the Education section
+      ("DUT → WUT") and the Contact section ("Dalian, China", the email) a few
+      hundred pixels below, so the page stated the same facts in two places and
+      a reader scrolling past met each one twice. Anything that has, or will
+      have, its own section does not belong here.
+    -->
+    <dl class="facts">
+      <div class="facts__row">
+        <dt class="facts__term">Position</dt>
+        <dd class="facts__value">{profile.role}</dd>
+      </div>
+      <div class="facts__row">
+        <dt class="facts__term">Affiliation</dt>
+        <dd class="facts__value">{profile.affiliation}</dd>
+      </div>
+      <div class="facts__row">
+        <dt class="facts__term">Focus</dt>
+        <dd class="facts__value">NLP · RAG · LLM Reasoning</dd>
+      </div>
+      {
+        /*
+         * CV link, rendered only when one is configured. `profile.cv` was
+         * documented in two places and rendered in none — putting a PDF in
+         * public/cv/ did nothing. Same trap as the portrait slot.
+         */
+        profile.cv.file && (
+          <div class="facts__row">
+            <dt class="facts__term">CV</dt>
+            <dd class="facts__value">
+              <a class="facts__link" href={`/cv/${profile.cv.file}`} download>
+                {profile.cv.label}
+                <Icon name="document" size={12} />
+              </a>
+            </dd>
+          </div>
+        )
+      }
+    </dl>
+  </aside>
+</div>
+
+<style>
+  .about__prose {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  /* The opening paragraph gets slightly larger type and a drop-cap-like
+     weight shift, which is what signals "start reading here". */
+  .about__lede {
+    font-family: var(--font-serif);
+    font-size: var(--step-2);
+    line-height: 1.45;
+    letter-spacing: var(--tracking-heading);
+    color: var(--ink);
+    max-width: 36rem;
+  }
+
+  .about__lede strong {
+    font-weight: 600;
+  }
+
+  .about__text {
+    color: var(--ink-muted);
+    max-width: 36rem;
+  }
+
+  /* The stated focus areas, set as a plain list — the same two items the
+     original bio carried. */
+  .about__interests {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    max-width: 36rem;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+
+  .about__interests li {
+    position: relative;
+    padding-left: 1.35rem;
+    font-size: var(--step-0);
+    color: var(--ink);
+  }
+
+  .about__interests li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.72em;
+    width: 0.6rem;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  /* --- Portrait --- */
+
+  .portrait {
+    margin: 0 0 var(--space-lg);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--paper-sunken);
+  }
+
+  .portrait img {
+    display: block;
+    width: 100%;
+    height: auto;
+    /* A consistent crop keeps the column rhythm stable whatever aspect ratio
+       the supplied photograph happens to have. */
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+  }
+
+  /* --- Fact list --- */
+
+  .facts {
+    margin: 0;
+    border-top: 1px solid var(--rule);
+    /* Sticks alongside the prose on tall viewports, which keeps the aside
+       useful instead of stranding it at the top of a long column. */
+    position: sticky;
+    top: calc(var(--header-h) + var(--space-lg));
+  }
+
+  .facts__row {
+    display: grid;
+    grid-template-columns: minmax(0, 6.5rem) minmax(0, 1fr);
+    gap: var(--space-sm);
+    padding-block: 0.75rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .facts__term {
+    font-family: var(--font-mono);
+    font-size: var(--step--2);
+    letter-spacing: var(--tracking-meta);
+    text-transform: uppercase;
+    color: var(--ink-subtle);
+    padding-top: 0.12em;
+  }
+
+  .facts__value {
+    margin: 0;
+    font-size: var(--step--1);
+    color: var(--ink);
+    line-height: 1.55;
+  }
+
+  .facts__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--accent);
+    word-break: break-all;
+  }
+
+  .facts__link :global(svg) {
+    flex-shrink: 0;
+    opacity: 0.6;
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+
+  .facts__link:hover :global(svg) {
+    transform: translate(2px, -2px);
+    opacity: 1;
+  }
+
+  @media (max-width: 900px) {
+    .facts {
+      position: static;
+    }
+
+    .facts__row {
+      grid-template-columns: minmax(0, 7rem) minmax(0, 1fr);
+    }
+  }
+</style>

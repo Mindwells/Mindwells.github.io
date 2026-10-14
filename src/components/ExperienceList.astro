@@ -1,0 +1,151 @@
+---
+import Icon from './ui/Icon.astro';
+
+/**
+ * Work experience entry.
+ */
+export interface ExperienceItem {
+  title: string;
+  organization: string;
+  period: string;
+  location?: string;
+  role?: string;
+  href?: string;
+  /** The entry's Markdown body, already rendered to a component. */
+  Content?: any;
+}
+
+export interface Props {
+  items: ExperienceItem[];
+}
+
+const { items } = Astro.props;
+---
+
+<ul class="exp">
+  {
+    items.map((item, i) => (
+      <li class="exp__item" data-reveal="up" data-reveal-delay={Math.min(i, 5) * 80}>
+        <div class="exp__head">
+          <h3 class="exp__title">
+            {item.href ? (
+              <a href={item.href} target="_blank" rel="noopener noreferrer">
+                {item.title}
+                <span class="exp__arrow" aria-hidden="true">
+                  <Icon name="arrowUpRight" size={13} />
+                </span>
+              </a>
+            ) : (
+              item.title
+            )}
+          </h3>
+          <span class="exp__period mono">{item.period}</span>
+        </div>
+
+        <p class="exp__org">
+          <span class="exp__org-name">{item.organization}</span>
+          {item.location && <span class="exp__loc mono">{item.location}</span>}
+        </p>
+
+        {item.Content && (
+          <div class="exp__body prose prose--compact">
+            <item.Content />
+          </div>
+        )}
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  .exp {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .exp__item {
+    padding-block: var(--space-lg);
+    border-top: 1px solid var(--rule);
+  }
+
+  .exp__item:last-child {
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .exp__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+  }
+
+  .exp__title {
+    font-size: var(--step-1);
+    font-family: var(--font-sans);
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .exp__title a {
+    color: var(--ink);
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.35rem;
+  }
+
+  .exp__title a:hover {
+    color: var(--accent);
+  }
+
+  .exp__arrow {
+    color: var(--accent);
+    opacity: 0;
+    transform: translate(-2px, 2px);
+    transition:
+      opacity var(--dur-fast) var(--ease-out),
+      transform var(--dur-base) var(--ease-out);
+  }
+
+  .exp__title a:hover .exp__arrow {
+    opacity: 1;
+    transform: none;
+  }
+
+  .exp__period {
+    color: var(--ink-subtle);
+    font-size: var(--step--2);
+    letter-spacing: var(--tracking-meta);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .exp__org {
+    margin-top: 0.3rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+    max-width: none;
+  }
+
+  .exp__org-name {
+    color: var(--accent);
+    font-size: var(--step--1);
+  }
+
+  .exp__loc {
+    color: var(--ink-subtle);
+    font-size: var(--step--2);
+    letter-spacing: var(--tracking-meta);
+    text-transform: uppercase;
+  }
+
+  .exp__body {
+    margin-top: var(--space-xs);
+    color: var(--ink-muted);
+    font-size: var(--step--1);
+    max-width: var(--measure-wide);
+  }
+</style>

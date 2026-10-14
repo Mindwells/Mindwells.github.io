@@ -1,0 +1,48 @@
+---
+/**
+ * Empty-state note.
+ *
+ * Rendered while a section has no entries. Deliberately *not* a dashed
+ * placeholder box: a dashed border next to a heading reads as "unfinished
+ * page", which is exactly the impression an otherwise-complete site should
+ * avoid. This is instead an editorial footnote — a short rule and a line of
+ * muted text — so an empty section still looks composed.
+ *
+ * It disappears the moment the first real entry is added.
+ */
+export interface Props {
+  /** What the section will hold, written as a sentence. */
+  message: string;
+}
+
+const { message } = Astro.props;
+---
+
+<p class="empty" data-reveal="up">
+  <span class="empty__rule" aria-hidden="true"></span>
+  <span class="empty__text">{message}</span>
+</p>
+
+<style>
+  .empty {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-sm);
+    max-width: var(--measure-wide);
+    margin: 0;
+  }
+
+  .empty__rule {
+    flex-shrink: 0;
+    width: 1.75rem;
+    height: 1px;
+    background: var(--rule-strong);
+    transform: translateY(-0.38em);
+  }
+
+  .empty__text {
+    color: var(--ink-muted);
+    font-size: var(--step-0);
+    line-height: var(--leading-relaxed);
+  }
+</style>

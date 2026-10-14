@@ -1,0 +1,374 @@
+---
+import Icon from './ui/Icon.astro';
+import RetrievalViz from './RetrievalViz.astro';
+import { profile, activeLinks } from '../data/profile';
+import { researchAreas, researchSummary } from '../data/research';
+
+/**
+ * Hero.
+ *
+ * Deliberately says one thing once. The opening bio sentence used to appear
+ * here *and* again as the first paragraph of the About section directly below
+ * — the same words, twice, within one scroll. It now lives only in About.
+ *
+ * What remains is the complete above-the-fold message: who and where (status
+ * line), what field (headline), the two focus areas (deck), and the actions.
+ */
+
+const emailLink = activeLinks.find((link) => link.icon === 'mail');
+const secondaryLinks = activeLinks.filter((link) => link.icon !== 'mail').slice(0, 3);
+---
+
+<section class="hero" id="top">
+  <RetrievalViz />
+
+  <div class="hero__inner container">
+    <!--
+      The status line is the first thing on the page on purpose: it answers
+      "who is this and where are they" before any styling is appreciated.
+    -->
+    <p class="hero__status" data-reveal="up">
+      <span class="hero__pulse" aria-hidden="true"></span>
+      <span>{profile.role}</span>
+      <span class="hero__status-sep" aria-hidden="true">·</span>
+      <span class="hero__status-place">{profile.affiliation}</span>
+    </p>
+
+    <!--
+      The headline is the research field; the focus areas sit under it as a
+      deck. The deck is deliberately *outside* the h1: inside, the page's main
+      heading read as one run-on string ("Natural Language Processing
+      Retrieval-Augmented Generation · Large Language Model Reasoning"), which
+      is awkward to hear and useless for navigating by heading.
+    -->
+    <h1 class="hero__title">
+      <span data-reveal="up" data-reveal-delay="80">{researchSummary}</span>
+    </h1>
+    <p class="hero__deck" data-reveal="up" data-reveal-delay="170">
+      <em>{researchAreas.map((area) => area.title).join(' · ')}</em>
+    </p>
+
+    <div class="hero__lower">
+      <div class="hero__actions" data-reveal="up" data-reveal-delay="260">
+        {emailLink?.href && (
+          <a class="button button--primary" href={emailLink.href}>
+            <Icon name="mail" size={16} />
+            <span>Get in touch</span>
+          </a>
+        )}
+        <a class="button button--ghost" href="#research">
+          <span>Research</span>
+          <Icon name="arrowDown" size={16} />
+        </a>
+
+        {
+          secondaryLinks.length > 0 && (
+            <ul class="hero__links">
+              {secondaryLinks.map((link) => (
+                <li>
+                  <a
+                    class="hero__link"
+                    href={link.href}
+                    rel="me noopener noreferrer"
+                    target={link.href.startsWith('http') ? '_blank' : undefined}
+                    aria-label={link.label}
+                  >
+                    <Icon name={link.icon} size={17} />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Sentinel: the header condenses when this leaves the viewport. -->
+  <div class="hero__sentinel" data-header-sentinel aria-hidden="true"></div>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    min-height: min(92svh, 52rem);
+    display: flex;
+    align-items: center;
+    padding-block: clamp(4rem, 10vh, 8rem) var(--space-2xl);
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .hero__inner {
+    position: relative;
+    z-index: var(--z-base);
+    width: 100%;
+  }
+
+  /* --- Status line --- */
+
+  .hero__status {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    font-family: var(--font-mono);
+    font-size: var(--step--2);
+    letter-spacing: var(--tracking-meta);
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    max-width: none;
+    margin-bottom: clamp(2rem, 5vh, 3.5rem);
+  }
+
+  .hero__status-place {
+    color: var(--ink-subtle);
+  }
+
+  .hero__status-sep {
+    color: var(--rule-strong);
+  }
+
+  /* A live dot — the only continuously moving element besides the canvas.
+     It reads as "currently active" without saying it. */
+  .hero__pulse {
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-full);
+    background: var(--accent);
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .hero__pulse::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--accent);
+    animation: pulse-ring 2.6s var(--ease-out) infinite;
+  }
+
+  @keyframes pulse-ring {
+    0% {
+      transform: scale(1);
+      opacity: 0.6;
+    }
+    70%,
+    100% {
+      transform: scale(3.2);
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero__pulse::after {
+      animation: none;
+    }
+  }
+
+  /* --- Title --- */
+
+  .hero__title {
+    font-size: var(--step-7);
+    line-height: var(--leading-none);
+    letter-spacing: -0.035em;
+    /* Sized in `ch` so the field name breaks onto a second line rather than
+       running past the measure at any viewport. */
+    max-width: 16ch;
+    margin-bottom: 0;
+    text-wrap: balance;
+  }
+
+  /* The focus-area deck: its own type scale, so two long field names stay
+     readable instead of wrapping into a wall at display size. It carries the
+     spacing below the title block. */
+  .hero__deck {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: clamp(1.05rem, 0.85rem + 0.9vw, 1.6rem);
+    line-height: 1.4;
+    letter-spacing: var(--tracking-heading);
+    color: var(--accent);
+    margin-top: clamp(1rem, 2.2vw, 1.9rem);
+    margin-bottom: clamp(2.5rem, 7vh, 4.5rem);
+    max-width: 34ch;
+    text-wrap: pretty;
+  }
+
+  /* --- Lower block ---
+     Just the actions. The focus areas used to be repeated here as a column of
+     mono tags saying what the headline already said, and the bio sentence was
+     repeated in About; both are gone. */
+
+  .hero__lower {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-xl);
+  }
+
+  .hero__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+  }
+
+  /* --- Buttons --- */
+
+  .button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.78rem 1.35rem;
+    border-radius: var(--radius-full);
+    font-size: var(--step--1);
+    font-weight: 500;
+    letter-spacing: 0.005em;
+    border: 1px solid transparent;
+    cursor: pointer;
+    /* min target size for touch */
+    min-height: 44px;
+    transition:
+      background-color var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out),
+      transform var(--dur-base) var(--ease-spring);
+  }
+
+  .button :global(svg) {
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+
+  .button--primary {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .button--primary:hover {
+    background: var(--accent);
+    color: #fff;
+    transform: translateY(-2px);
+  }
+
+  .button--primary:hover :global(svg) {
+    transform: rotate(-8deg) scale(1.08);
+  }
+
+  .button--ghost {
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--rule-strong);
+  }
+
+  .button--ghost:hover {
+    border-color: var(--ink);
+    color: var(--ink);
+    transform: translateY(-2px);
+  }
+
+  .button--ghost:hover :global(svg) {
+    transform: translateY(3px);
+  }
+
+  .button:active {
+    transform: translateY(0) scale(0.985);
+  }
+
+  /* --- Inline social links --- */
+
+  .hero__links {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+    list-style: none;
+    margin: 0 0 0 0.35rem;
+    padding: 0;
+  }
+
+  .hero__links li + li {
+    margin-top: 0;
+  }
+
+  .hero__link {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-full);
+    color: var(--ink-subtle);
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out);
+  }
+
+  .hero__link:hover {
+    color: var(--accent);
+    background: var(--accent-wash);
+  }
+
+  /* --- Responsive --- */
+
+  @media (max-width: 900px) {
+    .hero {
+      min-height: auto;
+      padding-block: var(--space-3xl) var(--space-2xl);
+    }
+
+    .hero__title {
+      max-width: none;
+    }
+  }
+
+  /* Phones: the display size would push the primary action below the fold,
+     so the title steps down and the vertical rhythm tightens. The hero should
+     still state who this is and offer a way to make contact on first screen. */
+  @media (max-width: 640px) {
+    .hero {
+      padding-block: var(--space-2xl) var(--space-xl);
+    }
+
+    .hero__title {
+      font-size: clamp(2.4rem, 9vw, 3.25rem);
+      letter-spacing: -0.03em;
+      line-height: 1.06;
+    }
+
+    /* Spacing under the title block now lives on the deck. */
+    .hero__deck {
+      margin-bottom: var(--space-xl);
+    }
+
+    .hero__status {
+      margin-bottom: var(--space-lg);
+    }
+
+    .hero__lower {
+      gap: var(--space-lg);
+    }
+  }
+
+  @media (max-width: 520px) {
+    .hero__actions {
+      width: 100%;
+    }
+
+    .button {
+      flex: 1 1 auto;
+      justify-content: center;
+    }
+
+    .hero__links {
+      margin-left: 0;
+    }
+  }
+
+  .hero__sentinel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 1px;
+    height: 1px;
+  }
+</style>
