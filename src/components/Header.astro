@@ -23,11 +23,20 @@ const sections = [
 ];
 
 const navSections = sections;
+
+/**
+ * The header is shared by the homepage and the 404 page, but only the homepage
+ * has these sections. A bare `#about` on the 404 page is a dead link, so
+ * anchors are qualified with the homepage path whenever this is not the
+ * homepage — the nav still works from anywhere.
+ */
+const onHome = Astro.url.pathname === '/' || Astro.url.pathname === '';
+const anchor = (id: string): string => (onHome ? `#${id}` : `/#${id}`);
 ---
 
 <header class="header" data-header>
   <div class="header__inner container">
-    <a class="header__brand" href="#top" aria-label={`${profile.name} — back to top`}>
+    <a class="header__brand" href={anchor('top')} aria-label={`${profile.name} — back to top`}>
       <span class="header__monogram" aria-hidden="true">{profile.initials}</span>
       <span class="header__name">{profile.name}</span>
     </a>
@@ -37,7 +46,7 @@ const navSections = sections;
         {
           navSections.map((section) => (
             <li>
-              <a class="header__link" href={`#${section.id}`} data-nav-link>
+              <a class="header__link" href={anchor(section.id)} data-nav-link>
                 <span class="header__link-index" aria-hidden="true">{section.index}</span>
                 <span class="header__link-label">{section.label}</span>
               </a>
@@ -90,7 +99,7 @@ const navSections = sections;
       {
         navSections.map((section, i) => (
           <li class="drawer__item" style={`--i:${i}`}>
-            <a class="drawer__link" href={`#${section.id}`} data-drawer-link>
+            <a class="drawer__link" href={anchor(section.id)} data-drawer-link>
               <span class="drawer__index" aria-hidden="true">{section.index}</span>
               <span class="drawer__label">{section.label}</span>
               <span class="drawer__arrow" aria-hidden="true">

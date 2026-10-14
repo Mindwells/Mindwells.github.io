@@ -72,6 +72,12 @@ const CASES = [
     detail: (m) => `widest=${Math.max(0, ...m.readingMeasure.blocks.map((b) => b.charsPerLine))}ch`,
   },
   {
+    name: 'first-screen CTA',
+    setup: `addStyle('.hero { min-height: 200vh !important; }')`,
+    expect: (m) => m.firstScreen.ctaWithinFirstScreen === false,
+    detail: (m) => `CTA top ${m.firstScreen.ctaTop}px of ${m.firstScreen.viewportHeight}px`,
+  },
+  {
     name: 'reveal wiring',
     setup: `addStyle('.js [data-reveal] { opacity: 0 !important; }')`,
     expect: (m) => m.enhancement.stillInvisible > 0,

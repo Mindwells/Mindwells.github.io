@@ -780,16 +780,15 @@ async function main() {
 
   const report = { url: BASE, generatedAt: new Date().toISOString(), viewports: {} };
 
-  for (const viewport of VIEWPORTS) {
-    process.stdout.write(`auditing ${viewport.name} … `);
-    const data = await auditViewport(cdp, BASE, viewport);
-    report.viewports[viewport.name] = data;
+  /**
+   * Theme-dependent checks (contrast, overflow, targets) run in dark mode at
+   * more than one width: a phone in dark mode exercises the drawer styling and
+   * the small-type greys that the desktop pass never reaches.
+   */
+  const DARK_PASSES = new Set(['mobile-390', 'desktop-1440']);
 
-    // Contrast and overflow are theme-dependent; check dark at desktop only.
-    if (viewport.name === 'desktop-1440') {
-      report.viewports['desktop-1440-dark'] = await auditViewport(cdp, BASE, viewport, { theme: 'dark' });
-    }
-
+  /** Builds the flag list for one audited pass. */
+  const flagsFor = (data) => {
     const flags = [];
     if (data.horizontalOverflow.length) flags.push(`overflow:${data.horizontalOverflow.length}`);
     if (data.contrastIssues.length) flags.push(`contrast:${data.contrastIssues.length}`);
@@ -801,6 +800,7 @@ async function main() {
     if (data.viz && (data.viz.error || data.viz.painted === 0)) {
       flags.push(`VIZ:${data.viz.error ?? 'blank canvas'}`);
     }
+    if (data.firstScreen?.ctaWithinFirstScreen === false) flags.push('CTA-BELOW-FOLD');
     if (data.a11y) {
       if (data.a11y.h1Count !== 1) flags.push(`h1-count:${data.a11y.h1Count}`);
       if (data.a11y.headingSkips.length) flags.push(`heading-skip:${data.a11y.headingSkips[0]}`);
@@ -811,27 +811,43 @@ async function main() {
       if (data.a11y.landmarks.main !== 1) flags.push(`main-landmarks:${data.a11y.landmarks.main}`);
     }
     if (data.readingMeasure?.tooWide.length) {
-      flags.push(
-        `measure>80ch:${data.readingMeasure.tooWide.map((b) => `${b.selector}=${b.charsPerLine}`).join(',')}`,
-      );
+      flags.push(`measure>80ch:${data.readingMeasure.tooWide.map((b) => `${b.selector}=${b.charsPerLine}`).join(',')}`);
     }
     if (data.layoutDefects?.clipped.length) {
       flags.push(`CLIPPED:${data.layoutDefects.clipped.map((c) => c.selector).join(',')}`);
     }
-    if (data.layoutDefects?.overlapCount) {
-      flags.push(`OVERLAP:${data.layoutDefects.overlapCount}`);
+    if (data.layoutDefects?.overlapCount) flags.push(`OVERLAP:${data.layoutDefects.overlapCount}`);
+    return flags;
+  };
+
+  for (const viewport of VIEWPORTS) {
+    const passes = [{ key: viewport.name, theme: 'light' }];
+    if (DARK_PASSES.has(viewport.name)) passes.push({ key: `${viewport.name}-dark`, theme: 'dark' });
+
+    for (const pass of passes) {
+      process.stdout.write(`auditing ${pass.key} … `);
+      const data = await auditViewport(cdp, BASE, viewport, { theme: pass.theme });
+      report.viewports[pass.key] = data;
+      const flags = flagsFor(data);
+      console.log(flags.length ? flags.join(' ') : 'clean');
     }
-    console.log(flags.length ? flags.join(' ') : 'clean');
   }
 
-  // Also audit the 404 page at a single breakpoint.
+  // Also audit the 404 page, and actually report its findings rather than
+  // only storing them — an unchecked capture is not a check.
   process.stdout.write('auditing 404 … ');
-  report.notFound = await auditViewport(
-    cdp,
-    `${BASE}/definitely-not-a-page`,
-    { name: 'notfound-1440', width: 1440, height: 900 },
-  );
-  console.log('done');
+  report.notFound = await auditViewport(cdp, `${BASE}/definitely-not-a-page`, {
+    name: 'notfound-1440',
+    width: 1440,
+    height: 900,
+  });
+  {
+    const notFoundFlags = flagsFor(report.notFound).filter(
+      // The 404 is a short page with no hero, so hero-specific checks do not apply.
+      (f) => !f.startsWith('VIZ') && !f.startsWith('CTA-'),
+    );
+    console.log(notFoundFlags.length ? notFoundFlags.join(' ') : 'clean');
+  }
 
   /* --- Robustness passes ------------------------------------------------
      These check the page still works when the user's preferences or
