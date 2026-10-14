@@ -71,6 +71,15 @@ export function connect(url) {
         listeners.get(method).add(fn);
       });
     },
+    /**
+     * Subscribes to every occurrence of `method`. Returns an unsubscribe
+     * function — used for streaming CDP events such as Network traffic.
+     */
+    on(method, handler) {
+      if (!listeners.has(method)) listeners.set(method, new Set());
+      listeners.get(method).add(handler);
+      return () => listeners.get(method)?.delete(handler);
+    },
     close() {
       ws.close();
     },

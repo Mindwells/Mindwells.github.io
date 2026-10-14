@@ -781,6 +781,19 @@ async function main() {
   const report = { url: BASE, generatedAt: new Date().toISOString(), viewports: {} };
 
   /**
+   * Failures collected across every check.
+   *
+   * Without this the audit printed PROBLEM and still exited 0, which makes it
+   * useless as a gate: a red line in a long log is easy to miss and impossible
+   * for CI to enforce.
+   */
+  const problems = [];
+  const verdict = (label, ok, note = '') => {
+    console.log(ok ? `clean${note ? ` (${note})` : ''}` : `PROBLEM${note ? ` (${note})` : ''}`);
+    if (!ok) problems.push(`${label}${note ? `: ${note}` : ''}`);
+  };
+
+  /**
    * Theme-dependent checks (contrast, overflow, targets) run in dark mode at
    * more than one width: a phone in dark mode exercises the drawer styling and
    * the small-type greys that the desktop pass never reaches.
@@ -829,7 +842,9 @@ async function main() {
       const data = await auditViewport(cdp, BASE, viewport, { theme: pass.theme });
       report.viewports[pass.key] = data;
       const flags = flagsFor(data);
-      console.log(flags.length ? flags.join(' ') : 'clean');
+      const flagText = flags.join(' ');
+      console.log(flagText.length ? flagText : 'clean');
+      if (flags.length) problems.push(`${pass.key}: ${flagText}`);
     }
   }
 
@@ -846,7 +861,7 @@ async function main() {
       // The 404 is a short page with no hero, so hero-specific checks do not apply.
       (f) => !f.startsWith('VIZ') && !f.startsWith('CTA-'),
     );
-    console.log(notFoundFlags.length ? notFoundFlags.join(' ') : 'clean');
+    verdict('404 page', notFoundFlags.length === 0, notFoundFlags.join(' '));
   }
 
   /* --- Robustness passes ------------------------------------------------
@@ -980,7 +995,11 @@ async function main() {
     });
     report.mobileDrawer = result.value;
     const ok = result.value?.initiallyHidden === true && result.value?.openedHidden === false && result.value?.closedAfterEscape === true;
-    console.log(ok ? 'clean' : 'PROBLEM');
+    verdict(
+      'mobile drawer',
+      ok,
+      `opened=${result.value?.openedHidden === false} closedOnEsc=${result.value?.closedAfterEscape}`,
+    );
   }
 
   /* --- 4b. Focus must not escape the open drawer ---
@@ -1051,7 +1070,11 @@ async function main() {
       escapedTo: escaped.slice(0, 4).map((s) => `${s.label} (${s.direction})`),
       visited: [...new Set(stops.map((s) => s.label))],
     };
-    console.log(escaped.length === 0 ? 'clean' : `ESCAPED:${escaped.length} -> ${escaped.slice(0, 3).map((s) => `${s.label}/${s.direction}`).join(' | ')}`);
+    verdict(
+      'drawer focus containment',
+      escaped.length === 0,
+      escaped.length ? escaped.slice(0, 3).map((s) => `${s.label}/${s.direction}`).join(' | ') : 'no escapes',
+    );
 
     // Close the drawer again so subsequent passes start from a clean state.
     await cdp.send('Input.dispatchKeyEvent', {
@@ -1126,7 +1149,7 @@ async function main() {
       firstIsSkipLink: stops[0]?.skipLinkVisible === true,
     };
     const ok = stops.length > 0 && withFocusRing === stops.length;
-    console.log(ok ? 'clean' : `PROBLEM (${withFocusRing}/${stops.length} have a focus ring)`);
+    verdict('keyboard focus ring', ok, `${withFocusRing}/${stops.length} tab stops show a ring`);
   }
 
   /* --- 6. Runtime cost ---
@@ -1249,7 +1272,11 @@ async function main() {
       p.hiddenReveals === 0 &&
       p.bodyBg === 'rgb(255, 255, 255)' &&
       p.bodyColor === 'rgb(0, 0, 0)';
-    console.log(ok ? 'clean' : `PROBLEM (header=${p.headerVisible} viz=${p.vizVisible} hidden=${p.hiddenReveals} bg=${p.bodyBg})`);
+    verdict(
+      'print styles',
+      ok,
+      `header=${p.headerVisible} viz=${p.vizVisible} hiddenReveals=${p.hiddenReveals} bg=${p.bodyBg}`,
+    );
   }
   await cdp.send('Emulation.setEmulatedMedia', { media: '', features: [] });
 
@@ -1327,7 +1354,7 @@ async function main() {
 
     report.hover = results;
     const dead = results.filter((r) => r.present && !r.responded);
-    console.log(dead.length === 0 ? 'clean' : `DEAD:${dead.map((d) => d.name).join(',')}`);
+    verdict('hover states', dead.length === 0, dead.length ? dead.map((d) => d.name).join(',') : 'all respond');
   }
 
   /* --- 9. Anchor offsets ---
@@ -1367,7 +1394,11 @@ async function main() {
     });
     report.anchors = result.value;
     const bad = result.value.sections.filter((s) => !s.clearsHeader);
-    console.log(bad.length === 0 ? 'clean' : `HIDDEN:${bad.map((b) => `${b.id}@${b.topAfterJump}`).join(',')}`);
+    verdict(
+      'anchor offsets',
+      bad.length === 0,
+      bad.length ? bad.map((b) => `${b.id}@${b.topAfterJump}`).join(',') : `${report.anchors.sections.length} sections clear the header`,
+    );
   }
 
   /* --- 10. Hero responds to the pointer ---
@@ -1462,7 +1493,97 @@ async function main() {
 
     const p = report.heroPointer;
     const ok = p.animatedWithPointer && p.canvasPointerEvents === 'none' && p.ctaHitTest?.ctaReachable === true;
-    console.log(ok ? 'clean' : `PROBLEM (animating=${p.animatedWithPointer} pointerEvents=${p.canvasPointerEvents} ctaReachable=${p.ctaHitTest?.ctaReachable})`);
+    verdict(
+      'hero pointer',
+      ok,
+      `animating=${p.animatedWithPointer} pointerEvents=${p.canvasPointerEvents} ctaReachable=${p.ctaHitTest?.ctaReachable}`,
+    );
+  }
+
+  /* --- 7b. Payload over the wire ---
+     Runtime cost was measured, but never the actual bytes a reader downloads.
+     This captures every request the page makes and totals them by type, so a
+     stray dependency or an unused font subset would be visible. */
+  process.stdout.write('checking payload … ');
+  {
+    await cdp.send('Network.enable');
+    await cdp.send('Network.setCacheDisabled', { cacheDisabled: true });
+
+    const byRequestId = new Map();
+    const offResponse = cdp.on('Network.responseReceived', (p) => {
+      byRequestId.set(p.requestId, {
+        url: p.response.url,
+        type: p.type,
+        status: p.response.status,
+        mimeType: p.response.mimeType,
+        fromDiskCache: p.response.fromDiskCache === true,
+        encodedDataLength: 0,
+      });
+    });
+    const offFinished = cdp.on('Network.loadingFinished', (p) => {
+      const entry = byRequestId.get(p.requestId);
+      if (entry) entry.encodedDataLength = p.encodedDataLength ?? 0;
+    });
+
+    await navigate(cdp, BASE, 2200);
+    offResponse();
+    offFinished();
+
+    /*
+     * Only real network traffic counts.
+     *
+     * A headless browser running a normal profile also reports its own
+     * extensions' resources (chrome-extension://, and their fetches), which
+     * otherwise dominate the totals and show up as phantom "third party"
+     * requests. Inline and devtools schemes are excluded for the same reason.
+     */
+    const isRealRequest = (r) => /^https?:/i.test(r.url);
+    const resources = [...byRequestId.values()].filter((r) => r.status !== 0 && isRealRequest(r));
+
+    const totals = {};
+    for (const r of resources) {
+      const key = r.type || 'Other';
+      totals[key] = totals[key] ?? { count: 0, bytes: 0 };
+      totals[key].count += 1;
+      totals[key].bytes += r.encodedDataLength;
+    }
+
+    const totalBytes = resources.reduce((sum, r) => sum + r.encodedDataLength, 0);
+    const failures = resources.filter((r) => r.status >= 400);
+    const thirdParty = resources.filter((r) => !r.url.startsWith(BASE));
+
+    report.payload = {
+      requestCount: resources.length,
+      totalBytes,
+      totalKB: Math.round(totalBytes / 1024),
+      totals,
+      failures: failures.map((f) => `${f.status} ${f.url}`),
+      thirdParty: thirdParty.map((t) => t.url),
+      resources: resources
+        .map((r) => ({
+          url: r.url.replace(BASE, ''),
+          type: r.type,
+          status: r.status,
+          kb: Math.round((r.encodedDataLength / 1024) * 10) / 10,
+        }))
+        .sort((a, b) => b.kb - a.kb),
+    };
+
+    const p = report.payload;
+    // A budget, so gradual growth becomes visible instead of silently
+    // accumulating. The site currently sits well under half of it.
+    const BUDGET_KB = 600;
+    const overBudget = p.totalKB > BUDGET_KB;
+    const ok = p.failures.length === 0 && p.thirdParty.length === 0 && !overBudget;
+    verdict(
+      'payload',
+      ok,
+      `${p.requestCount} requests, ${p.totalKB}KB of ${BUDGET_KB}KB budget` +
+        (p.failures.length ? `, failures: ${p.failures.join('; ')}` : '') +
+        (p.thirdParty.length ? `, third party: ${p.thirdParty.join('; ')}` : ''),
+    );
+
+    await cdp.send('Network.setCacheDisabled', { cacheDisabled: false });
   }
 
   writeFileSync(join(outDir, 'report.json'), JSON.stringify(report, null, 2));
@@ -1619,8 +1740,30 @@ async function main() {
       console.log(`  overlap ${o.a} / ${o.b} by ${o.overlapX}x${o.overlapY}px`);
     }
   }
+  if (report.payload) {
+    const p = report.payload;
+    console.log(`payload: ${p.requestCount} requests, ${p.totalKB}KB total`);
+    for (const [type, v] of Object.entries(p.totals).sort((a, b) => b[1].bytes - a[1].bytes)) {
+      console.log(`  ${type.padEnd(12)} ${String(v.count).padStart(2)} requests  ${Math.round(v.bytes / 1024)}KB`);
+    }
+    if (p.failures.length) console.log(`  FAILURES: ${p.failures.join('; ')}`);
+    if (p.thirdParty.length) console.log(`  THIRD PARTY: ${p.thirdParty.join('; ')}`);
+  }
 
   cdp.close();
+
+  /* --- Final verdict ---
+     Non-zero exit when any check failed, so this works as a gate rather than
+     a log someone has to read. */
+  console.log('');
+  if (problems.length === 0) {
+    console.log(`audit: all checks passed (${Object.keys(report.viewports).length} passes + behavioural checks)`);
+    process.exit(0);
+  }
+
+  console.error(`audit: ${problems.length} check(s) failed`);
+  for (const problem of problems) console.error(`  - ${problem}`);
+  process.exit(1);
 }
 
 // Only run the audit when this file is the entry point; `selftest.mjs`

@@ -172,8 +172,12 @@ It also runs behavioural passes: `prefers-reduced-motion`, JavaScript
 disabled, the theme toggle, the mobile drawer, real Tab-key focus rings,
 dispatched pointer hovers (so a dead hover state fails), anchor landing
 offsets versus the sticky header, long tasks during a full-page scroll,
-proof the hero canvas pauses off screen and resumes on screen, and print
-rendering under emulated print media.
+proof the hero canvas pauses off screen and resumes on screen, print
+rendering under emulated print media, and the actual bytes over the wire
+(request count, per-type totals, a size budget, 404s, third-party calls).
+
+It exits non-zero when any check fails, so it works as a gate rather than a
+log someone has to read. Every failure is listed again at the end.
 
 ```bash
 npm run build
