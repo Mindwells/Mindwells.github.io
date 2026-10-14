@@ -76,7 +76,15 @@ const navSections = sections;
 </header>
 
 <!-- Mobile drawer -->
-<div class="drawer" id="mobile-nav" data-drawer hidden>
+<div
+  class="drawer"
+  id="mobile-nav"
+  data-drawer
+  role="dialog"
+  aria-modal="true"
+  aria-label="Sections"
+  hidden
+>
   <nav class="drawer__nav" aria-label="Sections">
     <ul class="drawer__list">
       {
@@ -452,12 +460,65 @@ const navSections = sections;
   if (toggle && drawer) {
     let lastFocused: Element | null = null;
 
+    const focusables = (): HTMLElement[] => {
+      // The close control lives outside the drawer but is part of the same
+      // modal interaction, so it belongs in the cycle.
+      const candidates = [
+        toggle,
+        ...drawer.querySelectorAll<HTMLElement>('a[href], button:not([disabled])'),
+      ];
+      return candidates.filter((el) => el.offsetParent !== null || el === document.activeElement);
+    };
+
+    /**
+     * Keeps Tab inside the open drawer.
+     *
+     * Without this, tabbing moves focus to the page content sitting behind the
+     * overlay — visible to the browser, invisible to the reader.
+     */
+    const trapFocus = (event: KeyboardEvent): void => {
+      if (event.key !== 'Tab') return;
+
+      const items = focusables();
+      if (items.length === 0) return;
+
+      const first = items[0]!;
+      const last = items[items.length - 1]!;
+      const active = document.activeElement;
+
+      if (!items.includes(active as HTMLElement)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+        return;
+      }
+
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    const onKeydown = (event: KeyboardEvent): void => {
+      if (drawer.hidden) return;
+      if (event.key === 'Escape') {
+        close();
+        return;
+      }
+      trapFocus(event);
+    };
+
     const open = (): void => {
       lastFocused = document.activeElement;
       drawer.hidden = false;
       toggle.setAttribute('aria-expanded', 'true');
       toggle.setAttribute('aria-label', 'Close section menu');
       document.body.style.overflow = 'hidden';
+      document.addEventListener('keydown', onKeydown);
+      // Focus the first section link rather than the close button: the reader
+      // opened this to navigate.
       drawer.querySelector<HTMLAnchorElement>('a')?.focus();
     };
 
@@ -466,6 +527,7 @@ const navSections = sections;
       toggle.setAttribute('aria-expanded', 'false');
       toggle.setAttribute('aria-label', 'Open section menu');
       document.body.style.overflow = '';
+      document.removeEventListener('keydown', onKeydown);
       if (restoreFocus) (lastFocused as HTMLElement | null)?.focus();
     };
 
@@ -477,10 +539,6 @@ const navSections = sections;
     // Any navigation inside the drawer dismisses it.
     drawer.querySelectorAll('a').forEach((link) => {
       link.addEventListener('click', () => close(false));
-    });
-
-    document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && !drawer.hidden) close();
     });
 
     // If the viewport grows past the breakpoint, reset to the desktop state.

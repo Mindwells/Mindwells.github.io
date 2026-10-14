@@ -827,6 +827,87 @@ async function main() {
     console.log(ok ? 'clean' : 'PROBLEM');
   }
 
+  /* --- 4b. Focus must not escape the open drawer ---
+     The drawer covers the page, so tabbing out of it moves focus to content
+     the reader cannot see. Drive real Tab keys with the drawer open and check
+     that focus stays inside. */
+  process.stdout.write('checking drawer focus containment … ');
+  {
+    await navigate(cdp, BASE, 900);
+
+    await cdp.send('Runtime.evaluate', {
+      expression: `document.querySelector('[data-menu-toggle]').click()`,
+      returnByValue: true,
+    });
+    await sleep(450);
+
+    const pressTab = async (shift = false) => {
+      for (const type of ['rawKeyDown', 'keyUp']) {
+        await cdp.send('Input.dispatchKeyEvent', {
+          type,
+          key: 'Tab',
+          code: 'Tab',
+          windowsVirtualKeyCode: 9,
+          nativeVirtualKeyCode: 9,
+          modifiers: shift ? 8 : 0,
+        });
+      }
+      await sleep(110);
+    };
+
+    const readFocus = async () =>
+      (
+        await cdp.send('Runtime.evaluate', {
+          expression: `(() => {
+            const el = document.activeElement;
+            const drawer = document.querySelector('[data-drawer]');
+            const toggle = document.querySelector('[data-menu-toggle]');
+            if (!el || el === document.body) return { inside: false, label: '(body)' };
+            return {
+              // The close control lives in the header bar, which stays visible
+              // above the drawer, so it is part of the dialog interaction.
+              inside: drawer.contains(el) || el === toggle,
+              label: (el.getAttribute('aria-label') || el.textContent || el.tagName).trim().slice(0, 40),
+              tag: el.tagName.toLowerCase(),
+            };
+          })()`,
+          returnByValue: true,
+        })
+      ).result.value;
+
+    const stops = [];
+    for (let i = 0; i < 12; i++) {
+      await pressTab();
+      stops.push({ ...(await readFocus()), direction: 'forward' });
+    }
+    // Backwards tabbing must wrap too, not fall out of the top of the drawer.
+    for (let i = 0; i < 12; i++) {
+      await pressTab(true);
+      stops.push({ ...(await readFocus()), direction: 'backward' });
+    }
+
+    const escaped = stops.filter((s) => !s.inside);
+    report.drawerFocus = {
+      stops: stops.length,
+      forward: stops.filter((s) => s.direction === 'forward').length,
+      backward: stops.filter((s) => s.direction === 'backward').length,
+      escapedCount: escaped.length,
+      escapedTo: escaped.slice(0, 4).map((s) => `${s.label} (${s.direction})`),
+      visited: [...new Set(stops.map((s) => s.label))],
+    };
+    console.log(escaped.length === 0 ? 'clean' : `ESCAPED:${escaped.length} -> ${escaped.slice(0, 3).map((s) => `${s.label}/${s.direction}`).join(' | ')}`);
+
+    // Close the drawer again so subsequent passes start from a clean state.
+    await cdp.send('Input.dispatchKeyEvent', {
+      type: 'rawKeyDown',
+      key: 'Escape',
+      code: 'Escape',
+      windowsVirtualKeyCode: 27,
+    });
+    await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+    await sleep(300);
+  }
+
   /* --- 5. Keyboard: focus is reachable and visibly indicated ---
      `:focus-visible` only matches after real keyboard interaction, so this
      drives an actual Tab key through CDP rather than calling .focus(). */
