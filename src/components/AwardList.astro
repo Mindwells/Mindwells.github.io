@@ -8,6 +8,8 @@ export interface AwardItem {
   level?: string;
   issuer?: string;
   href?: string;
+  /** The entry's Markdown body, already rendered to a component. */
+  Content?: any;
 }
 
 export interface Props {
@@ -36,6 +38,11 @@ const sorted = [...items].sort((a, b) => b.date.getTime() - a.date.getTime());
             )}
           </p>
           {item.issuer && <p class="award__issuer">{item.issuer}</p>}
+          {item.Content && (
+            <div class="award__detail prose prose--compact">
+              <item.Content />
+            </div>
+          )}
         </div>
         {item.level && <span class="award__level mono">{item.level}</span>}
       </li>
@@ -89,6 +96,10 @@ const sorted = [...items].sort((a, b) => b.date.getTime() - a.date.getTime());
     margin-top: 0.15rem;
     color: var(--ink-muted);
     font-size: var(--step--1);
+  }
+
+  .award__detail {
+    margin-top: var(--space-2xs);
   }
 
   .award__level {

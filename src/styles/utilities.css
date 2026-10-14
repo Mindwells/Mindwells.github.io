@@ -58,27 +58,14 @@
   grid-column: 8 / span 5;
 }
 
-.col-full {
-  grid-column: 1 / -1;
-}
-
 @media (max-width: 900px) {
   .col-main,
-  .col-aside,
-  .col-full {
+  .col-aside {
     grid-column: 1 / -1;
   }
 }
 
 /* --- Metadata / label typography ---------------------------------------- */
-
-.meta {
-  font-family: var(--font-mono);
-  font-size: var(--step--2);
-  letter-spacing: var(--tracking-meta);
-  text-transform: uppercase;
-  color: var(--ink-subtle);
-}
 
 .label {
   font-family: var(--font-mono);
@@ -91,33 +78,10 @@
   gap: var(--space-2xs);
 }
 
-.lede {
-  font-size: var(--step-1);
-  line-height: var(--leading-relaxed);
-  color: var(--ink-muted);
-  max-width: var(--measure-wide);
-}
-
-.muted {
-  color: var(--ink-muted);
-}
-
-.subtle {
-  color: var(--ink-subtle);
-}
-
 .mono {
   font-family: var(--font-mono);
   font-size: var(--step--1);
   letter-spacing: 0;
-}
-
-/* --- Rules -------------------------------------------------------------- */
-
-.rule {
-  border: 0;
-  border-top: 1px solid var(--rule);
-  width: 100%;
 }
 
 /* --- Accessibility ------------------------------------------------------ */

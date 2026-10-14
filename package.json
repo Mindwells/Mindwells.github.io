@@ -10,7 +10,8 @@
     "check": "astro check",
     "serve": "node tools/serve.mjs",
     "audit": "node tools/measure.mjs",
-    "og": "node tools/og.mjs"
+    "og": "node tools/og.mjs",
+    "check:encoding": "node tools/check-encoding.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",

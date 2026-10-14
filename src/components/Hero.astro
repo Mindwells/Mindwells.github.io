@@ -170,7 +170,7 @@ const secondaryLinks = activeLinks.filter((link) => link.icon !== 'mail').slice(
 
   .hero__title {
     font-size: var(--step-7);
-    line-height: 1.02;
+    line-height: var(--leading-none);
     letter-spacing: -0.035em;
     /* Sized in `ch` so the field name breaks onto a second line rather than
        running past the measure at any viewport. */
@@ -386,7 +386,6 @@ const secondaryLinks = activeLinks.filter((link) => link.icon !== 'mail').slice(
       line-height: 1.06;
       margin-bottom: var(--space-xl);
     }
-
     .hero__status {
       margin-bottom: var(--space-lg);
     }

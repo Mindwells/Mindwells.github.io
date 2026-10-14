@@ -4,7 +4,7 @@ import Icon from './ui/Icon.astro';
 /**
  * Dated news list.
  *
- * Date in the left column, everything else to the right â€?the same ledger
+ * Date in the left column, everything else to the right â€” the same ledger
  * logic as the rest of the page. Hovering raises the whole row rather than
  * just the link, so the target is generous.
  */
@@ -13,7 +13,11 @@ export interface NewsItem {
   title: string;
   tag?: string;
   href?: string;
-  body?: string;
+  /**
+   * The entry's Markdown body, already rendered to a component. Astro types
+   * `render()` as `any`, so this follows suit rather than inventing a shape.
+   */
+  Content?: any;
 }
 
 export interface Props {
@@ -58,7 +62,11 @@ const sorted = [...items].sort((a, b) => b.date.getTime() - a.date.getTime());
                   </span>
                 )}
               </p>
-              {item.body && <p class="news__text">{item.body}</p>}
+              {item.Content && (
+                <div class="news__text prose prose--compact">
+                  <item.Content />
+                </div>
+              )}
             </div>
 
             {item.tag && <span class="news__tag mono">{item.tag}</span>}
@@ -133,9 +141,6 @@ const sorted = [...items].sort((a, b) => b.date.getTime() - a.date.getTime());
 
   .news__text {
     margin-top: 0.3rem;
-    color: var(--ink-muted);
-    font-size: var(--step--1);
-    max-width: var(--measure-wide);
   }
 
   .news__tag {

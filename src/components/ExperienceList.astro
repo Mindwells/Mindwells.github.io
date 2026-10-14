@@ -11,7 +11,8 @@ export interface ExperienceItem {
   location?: string;
   role?: string;
   href?: string;
-  body?: string;
+  /** The entry's Markdown body, already rendered to a component. */
+  Content?: any;
 }
 
 export interface Props {
@@ -46,7 +47,11 @@ const { items } = Astro.props;
           {item.location && <span class="exp__loc mono">{item.location}</span>}
         </p>
 
-        {item.body && <p class="exp__body">{item.body}</p>}
+        {item.Content && (
+          <div class="exp__body prose prose--compact">
+            <item.Content />
+          </div>
+        )}
       </li>
     ))
   }

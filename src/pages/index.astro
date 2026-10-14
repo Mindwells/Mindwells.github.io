@@ -1,4 +1,5 @@
 ---
+import { render } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import Hero from '../components/Hero.astro';
 import SectionHeader from '../components/SectionHeader.astro';
@@ -29,13 +30,24 @@ const [newsEntries, publicationEntries, awardEntries, experienceEntries] = await
   getEntries('experience', ({ data }) => !data.draft),
 ]);
 
-const newsItems = newsEntries.map((entry) => ({
-  date: entry.data.date,
-  title: entry.data.title,
-  tag: entry.data.tag,
-  href: entry.data.href,
-  body: entry.body?.trim() || undefined,
-}));
+/**
+ * Entry bodies are Markdown, so they are rendered to components rather than
+ * passed through as text. The collection templates invite you to write
+ * Markdown there; emitting `entry.body` directly would print its syntax
+ * verbatim.
+ */
+const bodyOf = async (entry: { body?: string }) =>
+  entry.body?.trim() ? (await render(entry as never)).Content : null;
+
+const newsItems = await Promise.all(
+  newsEntries.map(async (entry) => ({
+    date: entry.data.date,
+    title: entry.data.title,
+    tag: entry.data.tag,
+    href: entry.data.href,
+    Content: await bodyOf(entry),
+  })),
+);
 
 const publicationItems = publicationEntries
   .map((entry) => ({ ...entry.data, id: entry.id }))
@@ -45,25 +57,30 @@ const publicationItems = publicationEntries
     return a.title.localeCompare(b.title);
   });
 
-const awardItems = awardEntries.map((entry) => ({
-  date: entry.data.date,
-  title: entry.data.title,
-  level: entry.data.level,
-  issuer: entry.data.issuer,
-}));
-
-const experienceItems = experienceEntries
-  .map((entry) => ({
+const awardItems = await Promise.all(
+  awardEntries.map(async (entry) => ({
+    date: entry.data.date,
     title: entry.data.title,
-    organization: entry.data.organization,
-    period: entry.data.period,
-    location: entry.data.location,
-    role: entry.data.role,
-    href: entry.data.href,
-    body: entry.body?.trim() || undefined,
-    start: entry.data.start,
-  }))
-  .sort((a, b) => b.start.getTime() - a.start.getTime());
+    level: entry.data.level,
+    issuer: entry.data.issuer,
+    Content: await bodyOf(entry),
+  })),
+);
+
+const experienceItems = (
+  await Promise.all(
+    experienceEntries.map(async (entry) => ({
+      title: entry.data.title,
+      organization: entry.data.organization,
+      period: entry.data.period,
+      location: entry.data.location,
+      role: entry.data.role,
+      href: entry.data.href,
+      Content: await bodyOf(entry),
+      start: entry.data.start,
+    })),
+  )
+).sort((a, b) => b.start.getTime() - a.start.getTime());
 
 const hasNews = newsItems.length > 0;
 const hasPublications = publicationItems.length > 0;
