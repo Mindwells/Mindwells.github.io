@@ -101,24 +101,29 @@ const hasExperience = experienceItems.length > 0;
   </section>
 
   <!-- 03 — News -->
-  <section class="section section--ruled" id="news" aria-labelledby="news-title">
+  <section
+    class:list={['section', 'section--ruled', { 'section--tight': !hasNews }]}
+    id="news"
+    aria-labelledby="news-title"
+  >
     <div class="container">
       <SectionHeader index="03" title="News" id="news" lede="Talks, papers, and moves, newest first." />
       {
         hasNews ? (
           <NewsList items={newsItems} />
         ) : (
-          <EmptyState
-            icon="news"
-            message="Nothing to report yet. Paper acceptances and talk announcements will appear here as they happen."
-          />
+          <EmptyState message="Nothing to report yet. Paper acceptances and talk announcements will appear here as they happen." />
         )
       }
     </div>
   </section>
 
   <!-- 04 — Publications -->
-  <section class="section section--ruled" id="publications" aria-labelledby="publications-title">
+  <section
+    class:list={['section', 'section--ruled', { 'section--tight': !hasPublications }]}
+    id="publications"
+    aria-labelledby="publications-title"
+  >
     <div class="container">
       <SectionHeader
         index="04"
@@ -147,17 +152,18 @@ const hasExperience = experienceItems.length > 0;
             ))}
           </div>
         ) : (
-          <EmptyState
-            icon="book"
-            message="I am at the start of my Master's, so there is nothing published to list yet. If you are curious about what I am working on before it appears here, email me."
-          />
+          <EmptyState message="I am at the start of my Master's, so there is nothing published to list yet. Email me if you would like to know what I am working on." />
         )
       }
     </div>
   </section>
 
   <!-- 05 — Awards -->
-  <section class="section section--ruled" id="awards" aria-labelledby="awards-title">
+  <section
+    class:list={['section', 'section--ruled', { 'section--tight': !hasAwards }]}
+    id="awards"
+    aria-labelledby="awards-title"
+  >
     <div class="container">
       <SectionHeader
         index="05"
@@ -169,10 +175,7 @@ const hasExperience = experienceItems.length > 0;
         hasAwards ? (
           <AwardList items={awardItems} />
         ) : (
-          <EmptyState
-            icon="award"
-            message="This section is reserved for scholarships and awards. It will fill in as they are earned."
-          />
+          <EmptyState message="Reserved for scholarships and awards. This will fill in as they are earned." />
         )
       }
     </div>
@@ -187,7 +190,11 @@ const hasExperience = experienceItems.length > 0;
   </section>
 
   <!-- 07 — Experience -->
-  <section class="section section--ruled" id="experience" aria-labelledby="experience-title">
+  <section
+    class:list={['section', 'section--ruled', { 'section--tight': !hasExperience }]}
+    id="experience"
+    aria-labelledby="experience-title"
+  >
     <div class="container">
       <SectionHeader
         index="07"
@@ -199,10 +206,7 @@ const hasExperience = experienceItems.length > 0;
         hasExperience ? (
           <ExperienceList items={experienceItems} />
         ) : (
-          <EmptyState
-            icon="briefcase"
-            message="Internships and research positions will be listed here. None to show at the moment."
-          />
+          <EmptyState message="Internships and research positions will be listed here. None to show at the moment." />
         )
       }
     </div>

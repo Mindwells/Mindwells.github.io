@@ -1,50 +1,48 @@
 ---
-import Icon from './ui/Icon.astro';
-
 /**
- * Empty-state wrapper for sections without content yet.
+ * Empty-state note.
  *
- * Rather than showing a placeholder card ("No publications yet" — which reads
- * as unfinished), the section states what will live there in the owner's own
- * voice. It is honest, it keeps the page's rhythm intact, and it disappears
- * the moment a first entry is added.
+ * Rendered while a section has no entries. Deliberately *not* a dashed
+ * placeholder box: a dashed border next to a heading reads as "unfinished
+ * page", which is exactly the impression an otherwise-complete site should
+ * avoid. This is instead an editorial footnote — a short rule and a line of
+ * muted text — so an empty section still looks composed.
+ *
+ * It disappears the moment the first real entry is added.
  */
 export interface Props {
   /** What the section will hold, written as a sentence. */
   message: string;
-  icon?: string;
 }
 
-const { message, icon = 'book' } = Astro.props;
+const { message } = Astro.props;
 ---
 
-<div class="empty" data-reveal="up">
-  <span class="empty__icon" aria-hidden="true"><Icon name={icon} size={18} /></span>
-  <p class="empty__text">{message}</p>
-</div>
+<p class="empty" data-reveal="up">
+  <span class="empty__rule" aria-hidden="true"></span>
+  <span class="empty__text">{message}</span>
+</p>
 
 <style>
   .empty {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     gap: var(--space-sm);
-    padding: var(--space-lg) var(--space-md);
-    border: 1px dashed var(--rule-strong);
-    border-radius: var(--radius-md);
-    background: color-mix(in srgb, var(--paper-sunken) 45%, transparent);
+    max-width: 46rem;
+    margin: 0;
   }
 
-  .empty__icon {
-    display: grid;
-    place-items: center;
-    color: var(--ink-subtle);
+  .empty__rule {
     flex-shrink: 0;
+    width: 1.75rem;
+    height: 1px;
+    background: var(--rule-strong);
+    transform: translateY(-0.38em);
   }
 
   .empty__text {
     color: var(--ink-muted);
-    font-size: var(--step--1);
-    max-width: 44rem;
-    margin: 0;
+    font-size: var(--step-0);
+    line-height: var(--leading-relaxed);
   }
 </style>
