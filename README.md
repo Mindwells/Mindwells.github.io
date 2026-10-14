@@ -223,6 +223,18 @@ npm run og                                   # writes public/images/og.png
 
 Re-run it after changing the hero, the name, or the type system.
 
+## Copy review
+
+```bash
+npm run build && npm run copy
+```
+
+Dumps the words the built page actually shows, in reading order. Design review
+tends to focus on layout, but reading the output is how several real problems
+were found: a hero listing the same three terms twice, a section label and its
+empty-state note saying the same thing, and a page heading that read as one
+run-on sentence because the sub-heading sat inside the `h1`.
+
 ## Encoding check
 
 ```bash

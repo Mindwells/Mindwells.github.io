@@ -94,12 +94,7 @@ const hasExperience = experienceItems.length > 0;
   <!-- 01 — About -->
   <section class="section" id="about" aria-labelledby="about-title">
     <div class="container">
-      <SectionHeader
-        index="01"
-        title="About"
-        id="about"
-        lede="A short version of who I am and what I work on."
-      />
+      <SectionHeader index="01" title="About" id="about" />
       <About />
     </div>
   </section>
@@ -124,12 +119,17 @@ const hasExperience = experienceItems.length > 0;
     aria-labelledby="news-title"
   >
     <div class="container">
-      <SectionHeader index="03" title="News" id="news" lede="Talks, papers, and moves, newest first." />
+      <SectionHeader
+        index="03"
+        title="News"
+        id="news"
+        lede={hasNews ? 'Talks, papers, and moves, newest first.' : undefined}
+      />
       {
         hasNews ? (
           <NewsList items={newsItems} />
         ) : (
-          <EmptyState message="Nothing to report yet. Paper acceptances and talk announcements will appear here as they happen." />
+          <EmptyState message="Paper acceptances and talk announcements will appear here as they happen." />
         )
       }
     </div>
@@ -146,7 +146,7 @@ const hasExperience = experienceItems.length > 0;
         index="04"
         title="Publications"
         id="publications"
-        lede="Peer-reviewed work, with links to the paper and code where available."
+        lede={hasPublications ? 'Peer-reviewed work, with links to the paper and code where available.' : undefined}
       />
       {
         hasPublications ? (
@@ -169,7 +169,7 @@ const hasExperience = experienceItems.length > 0;
             ))}
           </div>
         ) : (
-          <EmptyState message="I am at the start of my Master's, so there is nothing published to list yet. Email me if you would like to know what I am working on." />
+          <EmptyState message="Peer-reviewed papers will be listed here. There is nothing published yet — email me if you would like to know what I am working on." />
         )
       }
     </div>
@@ -186,13 +186,13 @@ const hasExperience = experienceItems.length > 0;
         index="05"
         title="Honors &amp; Awards"
         id="awards"
-        lede="Scholarships, prizes, and recognitions."
+        lede={hasAwards ? 'Scholarships, prizes, and recognitions.' : undefined}
       />
       {
         hasAwards ? (
           <AwardList items={awardItems} />
         ) : (
-          <EmptyState message="Reserved for scholarships and awards. This will fill in as they are earned." />
+          <EmptyState message="Scholarships, prizes and recognitions will be listed here as they are earned." />
         )
       }
     </div>
@@ -217,13 +217,13 @@ const hasExperience = experienceItems.length > 0;
         index="07"
         title="Experience"
         id="experience"
-        lede="Research and industry positions."
+        lede={hasExperience ? 'Research and industry positions.' : undefined}
       />
       {
         hasExperience ? (
           <ExperienceList items={experienceItems} />
         ) : (
-          <EmptyState message="Internships and research positions will be listed here. None to show at the moment." />
+          <EmptyState message="Research and industry positions will be listed here. None to show at the moment." />
         )
       }
     </div>

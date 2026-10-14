@@ -11,6 +11,7 @@
     "serve": "node tools/serve.mjs",
     "audit": "node tools/measure.mjs",
     "selftest": "node tools/selftest.mjs",
+    "copy": "node tools/copy-review.mjs",
     "og": "node tools/og.mjs",
     "check:encoding": "node tools/check-encoding.mjs"
   },

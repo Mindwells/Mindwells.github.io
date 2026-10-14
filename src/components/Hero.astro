@@ -24,31 +24,25 @@ const secondaryLinks = activeLinks.filter((link) => link.icon !== 'mail').slice(
     </p>
 
     <!--
-      The headline is the research field itself, and the accent line is the
-      two focus areas — the site owner's own terms, not a rewritten slogan.
-      A title that quotes the person is more credible than one that performs
-      on their behalf.
+      The headline is the research field; the focus areas sit under it as a
+      deck. The deck is deliberately *outside* the h1: inside, the page's main
+      heading read as one run-on string ("Natural Language Processing
+      Retrieval-Augmented Generation · Large Language Model Reasoning"), which
+      is awkward to hear and useless for navigating by heading.
     -->
     <h1 class="hero__title">
-      <span class="hero__title-line" data-reveal="up" data-reveal-delay="80">
-        {researchSummary}
-      </span>
-      <span class="hero__title-line hero__title-line--accent" data-reveal="up" data-reveal-delay="170">
-        <em>{researchAreas.map((area) => area.title).join(' · ')}</em>
-      </span>
+      <span data-reveal="up" data-reveal-delay="80">{researchSummary}</span>
     </h1>
+    <p class="hero__deck" data-reveal="up" data-reveal-delay="170">
+      <em>{researchAreas.map((area) => area.title).join(' · ')}</em>
+    </p>
 
     <div class="hero__lower">
       <p class="hero__lede" data-reveal="up" data-reveal-delay="260">
         {profile.statement}
       </p>
 
-      <ul class="hero__tags" data-reveal="up" data-reveal-delay="330">
-        <li class="hero__tag hero__tag--lead">{researchSummary}</li>
-        {researchAreas.map((area) => <li class="hero__tag">{area.title}</li>)}
-      </ul>
-
-      <div class="hero__actions" data-reveal="up" data-reveal-delay="400">
+      <div class="hero__actions" data-reveal="up" data-reveal-delay="330">
         {emailLink?.href && (
           <a class="button button--primary" href={emailLink.href}>
             <Icon name="mail" size={16} />
@@ -175,18 +169,14 @@ const secondaryLinks = activeLinks.filter((link) => link.icon !== 'mail').slice(
     /* Sized in `ch` so the field name breaks onto a second line rather than
        running past the measure at any viewport. */
     max-width: 16ch;
-    margin-bottom: clamp(2.5rem, 7vh, 4.5rem);
+    margin-bottom: 0;
     text-wrap: balance;
   }
 
-  .hero__title-line {
-    display: block;
-  }
-
-  /* The focus-area line is a deck, not a second headline: it has its own
-     type scale so two long field names stay readable instead of wrapping
-     into a wall at display size. */
-  .hero__title-line--accent {
+  /* The focus-area deck: its own type scale, so two long field names stay
+     readable instead of wrapping into a wall at display size. It carries the
+     spacing below the title block. */
+  .hero__deck {
     font-family: var(--font-serif);
     font-style: italic;
     font-size: clamp(1.05rem, 0.85rem + 0.9vw, 1.6rem);
@@ -194,59 +184,31 @@ const secondaryLinks = activeLinks.filter((link) => link.icon !== 'mail').slice(
     letter-spacing: var(--tracking-heading);
     color: var(--accent);
     margin-top: clamp(1rem, 2.2vw, 1.9rem);
+    margin-bottom: clamp(2.5rem, 7vh, 4.5rem);
     max-width: 34ch;
     text-wrap: pretty;
   }
 
-  /* --- Lower block --- */
+  /* --- Lower block ---
+     The focus areas used to be repeated here as a column of mono tags, which
+     said exactly what the headline above already said. The block is now just
+     the positioning sentence and the actions. */
 
   .hero__lower {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: end;
-    column-gap: var(--gutter);
-    row-gap: var(--space-xl);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-xl);
   }
 
   .hero__lede {
-    grid-column: 1;
     font-size: var(--step-1);
     line-height: 1.6;
     color: var(--ink-muted);
     max-width: 34rem;
   }
 
-  .hero__tags {
-    grid-column: 2;
-    grid-row: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.4rem;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  .hero__tags li + li {
-    margin-top: 0;
-  }
-
-  .hero__tag {
-    font-family: var(--font-mono);
-    font-size: var(--step--2);
-    letter-spacing: var(--tracking-meta);
-    text-transform: uppercase;
-    color: var(--ink-subtle);
-    white-space: nowrap;
-  }
-
-  .hero__tag--lead {
-    color: var(--accent);
-  }
-
   .hero__actions {
-    grid-column: 1 / -1;
     display: flex;
     align-items: center;
     gap: var(--space-sm);
@@ -354,19 +316,6 @@ const secondaryLinks = activeLinks.filter((link) => link.icon !== 'mail').slice(
       padding-block: var(--space-3xl) var(--space-2xl);
     }
 
-    .hero__lower {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    .hero__tags {
-      grid-column: 1;
-      grid-row: auto;
-      flex-direction: row;
-      flex-wrap: wrap;
-      align-items: flex-start;
-      gap: 0.4rem 0.75rem;
-    }
-
     .hero__title {
       max-width: none;
     }
@@ -384,8 +333,13 @@ const secondaryLinks = activeLinks.filter((link) => link.icon !== 'mail').slice(
       font-size: clamp(2.4rem, 9vw, 3.25rem);
       letter-spacing: -0.03em;
       line-height: 1.06;
+    }
+
+    /* Spacing under the title block now lives on the deck. */
+    .hero__deck {
       margin-bottom: var(--space-xl);
     }
+
     .hero__status {
       margin-bottom: var(--space-lg);
     }
@@ -398,7 +352,7 @@ const secondaryLinks = activeLinks.filter((link) => link.icon !== 'mail').slice(
     }
 
     .hero__lower {
-      row-gap: var(--space-lg);
+      gap: var(--space-lg);
     }
   }
 
