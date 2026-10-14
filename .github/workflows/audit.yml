@@ -30,6 +30,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check the workflows themselves
+        run: npm run check:workflows
+
+      - name: Check encoding
+        run: npm run check:encoding
+
       - name: Build
         run: npm run build
         env:

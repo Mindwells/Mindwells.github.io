@@ -272,6 +272,25 @@ site and publishes it to GitHub Pages.
 deployment → Source*, choose **GitHub Actions**. The legacy "deploy from a
 branch" mode expects a Jekyll site and will not build this project.
 
+```bash
+npm run check:workflows
+```
+
+Validates the workflow files themselves — the one part of this project that
+cannot be exercised locally, so a malformed file would only surface at the
+moment of publishing. Checks YAML validity (including tab indentation, which
+YAML forbids), that each job has a runner and usable steps, that every action
+is pinned to a version rather than a branch, that the Pages job carries the
+`pages` and `id-token` permissions `deploy-pages` requires, and that every
+`npm run <script>` referenced in a workflow actually exists.
+
+`public/.nojekyll` is published with the site. Nothing needs it when deploying
+through GitHub Actions — that path serves the uploaded artifact directly with
+no Jekyll processing — but the build emits assets into `_astro/`, and Jekyll
+silently drops any directory whose name starts with an underscore. The marker
+costs nothing and removes that failure mode entirely if the Pages source is
+ever left on "deploy from a branch".
+
 ---
 
 ## History

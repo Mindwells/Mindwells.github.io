@@ -1,4 +1,5 @@
 ---
+import Icon from './ui/Icon.astro';
 import { profile } from '../data/profile';
 
 /**
@@ -80,6 +81,24 @@ import { profile } from '../data/profile';
         <dt class="facts__term">Focus</dt>
         <dd class="facts__value">NLP · RAG · LLM Reasoning</dd>
       </div>
+      {
+        /*
+         * CV link, rendered only when one is configured. `profile.cv` was
+         * documented in two places and rendered in none — putting a PDF in
+         * public/cv/ did nothing. Same trap as the portrait slot.
+         */
+        profile.cv.file && (
+          <div class="facts__row">
+            <dt class="facts__term">CV</dt>
+            <dd class="facts__value">
+              <a class="facts__link" href={`/cv/${profile.cv.file}`} download>
+                {profile.cv.label}
+                <Icon name="document" size={12} />
+              </a>
+            </dd>
+          </div>
+        )
+      }
     </dl>
   </aside>
 </div>
