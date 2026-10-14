@@ -248,6 +248,11 @@ const socialLinks = activeLinks.filter((link) => link.icon !== 'mail');
     gap: 0.4rem;
     color: var(--ink-muted);
     font-size: var(--step--1);
+    /* The box would otherwise be the label's line height (~24px), which is
+       below the 44px touch guideline on a phone. Padding expands the target
+       and the matching negative margin keeps the visual position identical. */
+    padding-block: 0.7rem;
+    margin-block: -0.7rem;
     transition: color var(--dur-fast) var(--ease-out);
   }
 

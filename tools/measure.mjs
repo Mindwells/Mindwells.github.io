@@ -15,7 +15,7 @@
  */
 
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { join, resolve } from 'node:path';
 import { connect, findPageTarget, navigate, sleep } from './cdp.mjs';
 
@@ -43,8 +43,22 @@ const VIEWPORTS = [
 /**
  * Runs inside the page. Returns a plain object so it can cross the CDP
  * boundary by value.
+ *
+ * Exported so `tools/selftest.mjs` can run the very same measurements against
+ * deliberately broken pages and prove each check actually fires.
+ *
+ * @param {{ touch?: boolean }} options
  */
-async function measurementScript() {
+export async function measurementScript(options = {}) {
+  /*
+   * Target size depends on the input. 44x44 is the touch guideline (Apple HIG,
+   * WCAG 2.5.5); WCAG 2.5.8 sets 24x24 as the AA minimum and that is what
+   * applies to a mouse. Enforcing 44 on a desktop viewport would flag controls
+   * that are perfectly usable, and enforcing 24 on a phone would miss real
+   * problems.
+   */
+  const minTarget = options.touch ? 44 : 24;
+  const targetStandard = options.touch ? '44px (touch)' : '24px (pointer, WCAG 2.5.8 AA)';
   const settle = (ms) => new Promise((r) => setTimeout(r, ms));
 
   const parseColor = (value) => {
@@ -109,6 +123,40 @@ async function measurementScript() {
 
   const viewportWidth = document.documentElement.clientWidth;
   const viewportHeight = document.documentElement.clientHeight;
+
+  /* --- 0. Reveal state, then pin the page to fully revealed ---------------
+     Reveal is scroll-driven, so whether an element is currently opaque
+     depends on where the page happens to have been scrolled. Left in place,
+     that makes every later check flaky: an unrevealed block reads as
+     invisible, so contrast skips its text and overlap detection finds nothing.
+     The evidence is captured first, then the page is pinned. */
+
+  const revealEls = [...document.querySelectorAll('[data-reveal]')];
+  const triggerBottom = window.innerHeight * 0.88;
+  const inTriggerZone = (el) => {
+    const r = el.getBoundingClientRect();
+    return r.bottom > 0 && r.top < triggerBottom && r.width > 0;
+  };
+  const inViewportNotVisible = revealEls.filter((el) => inTriggerZone(el) && !isVisible(el));
+  const enhancement = {
+    dataReveal: revealEls.length,
+    revealed: revealEls.filter((el) => el.classList.contains('is-revealed')).length,
+    inViewport: revealEls.filter(inTriggerZone).length,
+    stillInvisible: inViewportNotVisible.length,
+    invisibleSelectors: inViewportNotVisible.map(describe),
+    themeToggle: document.querySelectorAll('[data-theme-toggle]').length,
+    copyButtons: document.querySelectorAll('[data-copy]').length,
+    scriptCount: document.querySelectorAll('script[src]').length,
+  };
+
+  if (revealEls.length > 0) {
+    const pin = document.createElement('style');
+    pin.textContent = '[data-reveal]{transition:none !important;}';
+    document.head.appendChild(pin);
+    for (const el of revealEls) el.classList.add('is-revealed');
+    await settle(60);
+    pin.remove();
+  }
 
   /* --- 1. Horizontal overflow --- */
   const overflow = [];
@@ -190,7 +238,14 @@ async function measurementScript() {
 
     const matches = (x, y) => {
       const t = document.elementFromPoint(x, y);
-      return Boolean(t) && (t === el || el.contains(t) || t.contains(el));
+      /*
+       * Only the element itself or its descendants count.
+       *
+       * Including `t.contains(el)` — the element's *ancestors* — makes the
+       * measured area grow to whatever container surrounds it, so a genuinely
+       * 8x8 control reports a 61x61 hit area and passes.
+       */
+      return Boolean(t) && (t === el || el.contains(t));
     };
 
     const MAX = 30;
@@ -225,13 +280,24 @@ async function measurementScript() {
     const style = getComputedStyle(el);
     if (style.visibility === 'hidden' || style.display === 'none') continue;
 
-    // WCAG 2.5.8 exempts links inline within a sentence.
-    const isInlineInText = el.tagName === 'A' && el.closest('p, li, dd, .prose') && style.display.includes('inline');
-    if (isInlineInText) continue;
+    /*
+     * WCAG 2.5.8 exempts links rendered *inline within a sentence*, because the
+     * line height of surrounding prose sets their size.
+     *
+     * The exemption must require an inline display. Testing only for a `p`/`li`
+     * ancestor wrongly exempted icons and social links that merely happen to be
+     * list items — which is exactly how an 8x8 link slipped through here.
+     */
+    const isInlineInProse =
+      el.tagName === 'A' &&
+      style.display.startsWith('inline') &&
+      Boolean(el.closest('p, dd, blockquote, .prose')) &&
+      !el.closest('nav, .hero__links, .footer__social, .contact__links');
+    if (isInlineInProse) continue;
 
     const w = Math.round(rect.width);
     const h = Math.round(rect.height);
-    if (w < 44 || h < 44) candidates.push({ el, w, h });
+    if (w < minTarget || h < minTarget) candidates.push({ el, w, h });
   }
 
   // Hit-testing needs the element on screen; smooth scrolling is disabled so
@@ -245,7 +311,7 @@ async function measurementScript() {
     await settle(60);
     const extent = hitExtent(el);
     const effective = extent ?? { width: w, height: h };
-    if (effective.width < 44 || effective.height < 44) {
+    if (effective.width < minTarget || effective.height < minTarget) {
       smallTargets.push({
         selector: describe(el),
         width: effective.width,
@@ -361,28 +427,7 @@ async function measurementScript() {
   }));
 
   /* --- 9. Enhancement wiring ---
-     Guards against the whole interaction layer silently failing to load.
-     Only elements inside the observer's *effective* trigger zone count: the
-     reveal observer intentionally waits until an element is ~12% into the
-     viewport, so anything in the bottom sliver is legitimately still hidden.
-     An element inside the trigger zone that never appears is a real bug. */
-  const revealEls = [...document.querySelectorAll('[data-reveal]')];
-  const triggerBottom = window.innerHeight * 0.88;
-  const inTriggerZone = (el) => {
-    const r = el.getBoundingClientRect();
-    return r.bottom > 0 && r.top < triggerBottom && r.width > 0;
-  };
-  const inViewportNotVisible = revealEls.filter((el) => inTriggerZone(el) && !isVisible(el));
-  const enhancement = {
-    dataReveal: revealEls.length,
-    revealed: revealEls.filter((el) => el.classList.contains('is-revealed')).length,
-    inViewport: revealEls.filter(inTriggerZone).length,
-    stillInvisible: inViewportNotVisible.length,
-    invisibleSelectors: inViewportNotVisible.map(describe),
-    themeToggle: document.querySelectorAll('[data-theme-toggle]').length,
-    copyButtons: document.querySelectorAll('[data-copy]').length,
-    scriptCount: document.querySelectorAll('script[src]').length,
-  };
+     Sampled in section 0, before reveal state was pinned. */
 
   /* --- 10. Hero visualisation actually renders ---
      A canvas can exist, be sized correctly, and still be blank — e.g. if the
@@ -488,16 +533,36 @@ async function measurementScript() {
   };
 
   /* --- 13. Left-edge alignment ---
-     In editorial layout a heading and the content it introduces should share
-     a left edge; a section index hangs outside that edge rather than pushing
-     the heading inward. This measures the actual edges so drift is caught. */
-  const leftEdges = (selector) =>
-    [...document.querySelectorAll(selector)].map((el) => Math.round(el.getBoundingClientRect().left));
+     The design rule: a section heading sits on the container's content edge,
+     and the section index hangs outside it.
+
+     The edge is taken from the first line box via a Range, not from the
+     element's border box: padding moves the text without moving the box, and a
+     border-box measurement would call that aligned.
+
+     Comparing headings against *every* child element was too blunt — list
+     bleed margins and timeline columns are deliberately indented, so the
+     comparison reported drift where none exists. Comparing against the
+     container's content edge states the rule exactly. */
+  const textLeft = (el) => {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const rects = [...range.getClientRects()].filter((r) => r.width > 1 && r.height > 1);
+    if (rects.length === 0) return null;
+    return Math.round(Math.min(...rects.map((r) => r.left)));
+  };
+  const uniqueLefts = (values) => [...new Set(values.filter((v) => v !== null))];
+
+  const containers = [...document.querySelectorAll('section[id] > .container')];
   const alignment = {
-    container: [...new Set(leftEdges('section[id] > .container'))],
-    title: [...new Set(leftEdges('.section-header__title'))],
-    content: [...new Set(leftEdges('section[id] > .container > *:not(.section-header)'))],
-    index: [...new Set(leftEdges('.section-header__index'))],
+    container: uniqueLefts(containers.map((el) => Math.round(el.getBoundingClientRect().left))),
+    containerContent: uniqueLefts(
+      containers.map((el) =>
+        Math.round(el.getBoundingClientRect().left + Number.parseFloat(getComputedStyle(el).paddingLeft)),
+      ),
+    ),
+    title: uniqueLefts([...document.querySelectorAll('.section-header__title')].map(textLeft)),
+    index: uniqueLefts([...document.querySelectorAll('.section-header__index')].map(textLeft)),
   };
 
   /* --- 14. Reading measure ---
@@ -602,6 +667,8 @@ async function measurementScript() {
     contrastIssues,
     contrastChecked,
     smallTargets,
+    targetStandard,
+    minTarget,
     fonts,
     sticky,
     rhythm,
@@ -648,7 +715,7 @@ async function auditViewport(cdp, url, viewport, { theme = 'light', screenshot =
   await sleep(1400);
 
   const { result } = await cdp.send('Runtime.evaluate', {
-    expression: `(${measurementScript.toString()})()`,
+    expression: `(${measurementScript.toString()})(${JSON.stringify({ touch: viewport.width < 768 })})`,
     returnByValue: true,
     awaitPromise: true,
   });
@@ -696,6 +763,19 @@ async function main() {
         }).observe({ type: 'layout-shift', buffered: true });
       } catch (e) {}
     `,
+  });
+
+  /*
+   * The theme toggle writes the reader's choice to localStorage, which makes
+   * it survive across navigations *and across audit runs*. Without this reset,
+   * clicking the toggle once left the browser in dark mode and every later run
+   * silently measured the dark theme while reporting it as light.
+   *
+   * Runs at document start, before the page's own inline theme script reads
+   * storage, so each pass starts from the emulated colour scheme.
+   */
+  await cdp.send('Page.addScriptToEvaluateOnNewDocument', {
+    source: `try { localStorage.removeItem('theme'); } catch (e) {}`,
   });
 
   const report = { url: BASE, generatedAt: new Date().toISOString(), viewports: {} };
@@ -1467,9 +1547,10 @@ async function main() {
   }
   if (sample?.alignment) {
     const a = sample.alignment;
-    const aligned = a.title.length === 1 && a.content.length === 1 && a.title[0] === a.content[0];
+    const aligned =
+      a.title.length === 1 && a.containerContent.length === 1 && a.title[0] === a.containerContent[0];
     console.log(
-      `alignment: container=${a.container.join(',')} index=${a.index.join(',')} title=${a.title.join(',')} content=${a.content.join(',')}  ${aligned ? '(title and content share a left edge)' : '<-- TITLE/CONTENT EDGE MISMATCH'}`,
+      `alignment: container=${a.container.join(',')} contentEdge=${a.containerContent.join(',')} index=${a.index.join(',')} title=${a.title.join(',')}  ${aligned ? '(headings sit on the content edge, index hangs outside)' : '<-- HEADING/CONTENT EDGE MISMATCH'}`,
     );
   }
   if (report.print) {
@@ -1526,7 +1607,13 @@ async function main() {
   cdp.close();
 }
 
-main().catch((error) => {
-  console.error('\naudit failed:', error.message);
-  process.exit(1);
-});
+// Only run the audit when this file is the entry point; `selftest.mjs`
+// imports the measurement function without triggering a full run.
+const isEntryPoint = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isEntryPoint) {
+  main().catch((error) => {
+    console.error('\naudit failed:', error.message);
+    process.exit(1);
+  });
+}

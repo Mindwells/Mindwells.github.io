@@ -185,6 +185,27 @@ npm run audit                                # writes .audit/report.json + PNGs
 CDP is driven over a WebSocket rather than by spawning the browser from Node,
 so it also works in environments that block piped child processes.
 
+### Does the audit actually detect anything?
+
+```bash
+npm run selftest
+```
+
+A check that has never failed is not evidence that anything passed. The
+self-test breaks the page in one specific way at a time — low contrast, an
+8px control, horizontal overflow, clipped text, overlapping controls, a
+misaligned heading, an over-wide measure, a stuck reveal, a missing canvas,
+a second `h1`, a dead anchor, an unnamed button — runs the *same* measurement
+code against it, and asserts the matching check fires.
+
+Faults are injected at runtime with `!important` rather than by editing
+source: Astro scopes component styles with an attribute selector, so a plain
+class rule added to a stylesheet loses to the component's own rule and the
+"fault" never reaches the page, making the test pass for the wrong reason.
+
+All twelve currently fire. Running it is how several blind checks and two
+false negatives in the audit itself were found.
+
 ## Social preview image
 
 `og:image` is generated from the live homepage rather than composited by hand,

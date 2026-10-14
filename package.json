@@ -10,6 +10,7 @@
     "check": "astro check",
     "serve": "node tools/serve.mjs",
     "audit": "node tools/measure.mjs",
+    "selftest": "node tools/selftest.mjs",
     "og": "node tools/og.mjs",
     "check:encoding": "node tools/check-encoding.mjs"
   },
