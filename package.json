@@ -12,6 +12,7 @@
     "audit": "node tools/measure.mjs",
     "selftest": "node tools/selftest.mjs",
     "copy": "node tools/copy-review.mjs",
+    "check:claims": "node tools/check-copy-claims.mjs",
     "og": "node tools/og.mjs",
     "check:encoding": "node tools/check-encoding.mjs"
   },

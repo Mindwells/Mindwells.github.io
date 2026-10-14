@@ -169,7 +169,7 @@ const hasExperience = experienceItems.length > 0;
             ))}
           </div>
         ) : (
-          <EmptyState message="Peer-reviewed papers will be listed here. There is nothing published yet — email me if you would like to know what I am working on." />
+          <EmptyState message="Peer-reviewed papers will be listed here. Nothing is published yet." />
         )
       }
     </div>
@@ -232,12 +232,7 @@ const hasExperience = experienceItems.length > 0;
   <!-- 08 — Contact -->
   <section class="section section--ruled" id="contact" aria-labelledby="contact-title">
     <div class="container">
-      <SectionHeader
-        index="08"
-        title="Contact"
-        id="contact"
-        lede="Open to conversations about research, collaboration, or anything in the overlap."
-      />
+      <SectionHeader index="08" title="Contact" id="contact" />
       <Contact />
     </div>
   </section>

@@ -8,6 +8,11 @@ import { profile, activeLinks } from '../data/profile';
  * Deliberately not a form — there is no backend, and a fake form is worse
  * than none. Instead the email is presented large and copyable, with the
  * profile links beside it.
+ *
+ * It also makes no promises. An earlier version carried a note saying "the
+ * fastest way to reach me; I read everything and reply to anything specific",
+ * which is a commitment about someone else's inbox that the site has no
+ * business inventing.
  */
 
 const emailLink = activeLinks.find((link) => link.icon === 'mail');
@@ -41,9 +46,6 @@ const otherLinks = activeLinks.filter((link) => link.icon !== 'mail');
             </button>
             <span class="visually-hidden" role="status" aria-live="polite" data-copy-status></span>
           </div>
-          <p class="contact__note">
-            The fastest way to reach me. I read everything, and reply to anything specific.
-          </p>
         </>
       )
     }

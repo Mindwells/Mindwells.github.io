@@ -232,8 +232,19 @@ npm run build && npm run copy
 Dumps the words the built page actually shows, in reading order. Design review
 tends to focus on layout, but reading the output is how several real problems
 were found: a hero listing the same three terms twice, a section label and its
-empty-state note saying the same thing, and a page heading that read as one
-run-on sentence because the sub-heading sat inside the `h1`.
+empty-state note saying the same thing, a page heading that read as one
+run-on sentence, and a bio sentence repeated word-for-word in the hero and the
+section below it.
+
+```bash
+npm run check:claims
+```
+
+Advisory scan for first-person claims and invitations — "I read every email",
+"open to conversations", "email me if...". The site is generated on someone's
+behalf, so the thing to guard against is inventing commitments they never
+made. It is advisory only and never gates CI: it cannot tell an invented claim
+from the owner's own legitimate first-person writing.
 
 ## Encoding check
 

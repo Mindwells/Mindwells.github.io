@@ -4,6 +4,9 @@ import Base from '../layouts/Base.astro';
 /**
  * 404 — treated as a real page, not an afterthought. A visitor who lands on a
  * dead link is still a visitor.
+ *
+ * The copy avoids first person: "I may have moved something" is a claim about
+ * the site owner's actions that a generated page has no business making.
  */
 ---
 
@@ -14,8 +17,8 @@ import Base from '../layouts/Base.astro';
       This page isn't here.
     </h1>
     <p class="not-found__text">
-      The link may be old, or I may have moved something. Everything that exists lives on the
-      homepage.
+      The link may be out of date, or the page may have moved. Everything on this site is
+      reachable from the homepage.
     </p>
     <a class="not-found__link" href="/">
       <span>Back to the homepage</span>
