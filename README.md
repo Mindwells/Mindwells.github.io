@@ -61,6 +61,10 @@ publishing it. The sections currently contain only drafts, which is why each
 one shows a written placeholder instead of an empty list; add a real entry and
 it renders itself with no template edits.
 
+Entry bodies are **Markdown** — rendered through Astro's `render()`, so
+emphasis, links, inline code and lists all work. Keep them to a line or two;
+they are a supporting detail under the entry title, not body copy.
+
 ```
 src/content/news/2026-09-joining-dut.md
 src/content/publications/2026-my-paper.md
@@ -193,6 +197,21 @@ npm run og                                   # writes public/images/og.png
 ```
 
 Re-run it after changing the hero, the name, or the type system.
+
+## Encoding check
+
+```bash
+npm run check:encoding
+```
+
+Fails on either failure mode for damaged source text: invalid UTF-8 (a tool
+rewrote the file using the system legacy code page) and mojibake
+(double-encoded text, which is still valid UTF-8). Runs in CI before the
+build.
+
+**When editing files from a shell, do not use `Set-Content` / `Out-File` on
+source files** — on Windows they can re-encode the file using the legacy code
+page and silently replace characters it cannot map.
 
 ---
 
