@@ -65,3 +65,36 @@ function review(file = 'index.html') {
 review('index.html');
 console.log('');
 review('404.html');
+
+/* --------------------------------------------------------------------------
+   Full reading dump.
+
+   The structured view above answers "what does each section say". This
+   answers "what does a reader actually read, in order" — which is how the
+   duplicate bio sentence (hero lede and About opening paragraph, word for
+   word) and the fact box repeating the Education and Contact sections were
+   found. Neither is visible in source or in layout.
+   -------------------------------------------------------------------------- */
+console.log('\n\n=== full page, reading order ===');
+const html = readFileSync(`${dist}/index.html`, 'utf8');
+const body = html.slice(html.indexOf('<body'), html.indexOf('</body>'));
+
+const lines = body
+  .replace(/<script[\s\S]*?<\/script>/g, '')
+  .replace(/<style[\s\S]*?<\/style>/g, '')
+  // The mobile drawer duplicates the header nav; it is hidden on desktop.
+  .replace(/<div class="drawer"[\s\S]*?<\/div>\s*<\/div>/g, '')
+  .replace(/<\/(h1|h2|h3|h4|p|li|dd|dt|div|section|header|footer|nav|ul|ol|figure)>/g, '\n')
+  .replace(/<br\s*\/?>/g, '\n')
+  .replace(/<[^>]+>/g, ' ')
+  .replace(/&#39;/g, "'")
+  .replace(/&amp;/g, '&')
+  .replace(/&quot;/g, '"')
+  .replace(/&mdash;/g, '—')
+  .replace(/[ \t]+/g, ' ')
+  .split('\n')
+  .map((line) => line.trim())
+  .filter(Boolean);
+
+console.log(lines.join('\n'));
+console.log(`\n--- ${lines.length} lines, ${lines.join(' ').length} characters ---`);

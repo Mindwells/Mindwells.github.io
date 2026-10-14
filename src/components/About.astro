@@ -1,18 +1,13 @@
 ---
-import Icon from './ui/Icon.astro';
-import { profile, activeLinks } from '../data/profile';
-import { education } from '../data/education';
+import { profile } from '../data/profile';
 
 /**
  * About section.
  *
- * The prose is the site owner's own bio, kept verbatim. A small "at a glance"
- * definition list carries the facts that don't belong in a sentence, and an
- * optional portrait sits above it.
+ * The prose is the site owner's own bio, kept verbatim — this is the only
+ * place it appears; the hero used to repeat its opening sentence. A small
+ * "at a glance" fact box frames it, and an optional portrait sits above.
  */
-
-const emailLink = activeLinks.find((link) => link.icon === 'mail');
-const schoolNames = education.map((entry) => entry.abbr).join(' → ');
 ---
 
 <div class="about grid">
@@ -63,6 +58,15 @@ const schoolNames = education.map((entry) => entry.abbr).join(' → ');
       )
     }
 
+    <!--
+      The fact box frames the bio in a scannable form.
+
+      It deliberately stops there: it used to repeat the Education section
+      ("DUT → WUT") and the Contact section ("Dalian, China", the email) a few
+      hundred pixels below, so the page stated the same facts in two places and
+      a reader scrolling past met each one twice. Anything that has, or will
+      have, its own section does not belong here.
+    -->
     <dl class="facts">
       <div class="facts__row">
         <dt class="facts__term">Position</dt>
@@ -76,27 +80,6 @@ const schoolNames = education.map((entry) => entry.abbr).join(' → ');
         <dt class="facts__term">Focus</dt>
         <dd class="facts__value">NLP · RAG · LLM Reasoning</dd>
       </div>
-      <div class="facts__row">
-        <dt class="facts__term">Education</dt>
-        <dd class="facts__value">{schoolNames}</dd>
-      </div>
-      <div class="facts__row">
-        <dt class="facts__term">Based in</dt>
-        <dd class="facts__value">{profile.location}</dd>
-      </div>
-      {
-        emailLink?.handle && (
-          <div class="facts__row">
-            <dt class="facts__term">Email</dt>
-            <dd class="facts__value">
-              <a href={emailLink.href} class="facts__link">
-                {emailLink.handle}
-                <Icon name="arrowUpRight" size={12} />
-              </a>
-            </dd>
-          </div>
-        )
-      }
     </dl>
   </aside>
 </div>

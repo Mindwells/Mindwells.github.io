@@ -40,15 +40,13 @@ export const profile = {
   /** One sentence. Doubles as the meta description. */
   bio: 'Incoming M.S. student at Dalian University of Technology, working on Natural Language Processing with a focus on retrieval-augmented generation and large language model reasoning.',
 
-  /**
-   * Positioning sentence shown under the hero title.
-   *
-   * This is the site owner's own wording, kept verbatim — the hero states
-   * where he is and what he works on, in his words rather than a rewritten
-   * marketing line.
+  /*
+   * Note: the full bio prose lives in `src/components/About.astro`, not here.
+   * It carries inline emphasis (<strong>) around the institutions and the
+   * advisor, which does not survive a plain-string field — and a `statement`
+   * field kept here while nothing rendered it is the same trap the avatar
+   * slot fell into.
    */
-  statement:
-    "I am an incoming Master's student at the School of Computer Science and Technology, Dalian University of Technology (DUT), where I am fortunate to be advised by Assistant Professor Jihao Shi.",
 
   /**
    * Set `src` to a real photograph when available, e.g.

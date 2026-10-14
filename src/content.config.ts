@@ -33,7 +33,7 @@ const news = defineCollection({
     /** Optional short label, e.g. "Paper" or "Talk". */
     tag: z.string().optional(),
     /** External link the item points at. */
-    href: z.string().url().optional(),
+    href: z.url().optional(),
   }),
 });
 
@@ -52,7 +52,7 @@ const publications = defineCollection({
     abbr: z.string().optional(),
     abstract: z.string().optional(),
     links: z
-      .array(z.object({ label: z.string(), href: z.string().url() }))
+      .array(z.object({ label: z.string(), href: z.url() }))
       .default([]),
     /** Path under /images/ for a teaser figure. */
     thumbnail: z.string().optional(),
@@ -84,7 +84,7 @@ const experience = defineCollection({
     end: z.coerce.date().nullable().default(null),
     location: z.string().optional(),
     role: z.string().optional(),
-    href: z.string().url().optional(),
+    href: z.url().optional(),
     draft: z.boolean().default(false),
   }),
 });

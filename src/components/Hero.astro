@@ -4,6 +4,17 @@ import RetrievalViz from './RetrievalViz.astro';
 import { profile, activeLinks } from '../data/profile';
 import { researchAreas, researchSummary } from '../data/research';
 
+/**
+ * Hero.
+ *
+ * Deliberately says one thing once. The opening bio sentence used to appear
+ * here *and* again as the first paragraph of the About section directly below
+ * — the same words, twice, within one scroll. It now lives only in About.
+ *
+ * What remains is the complete above-the-fold message: who and where (status
+ * line), what field (headline), the two focus areas (deck), and the actions.
+ */
+
 const emailLink = activeLinks.find((link) => link.icon === 'mail');
 const secondaryLinks = activeLinks.filter((link) => link.icon !== 'mail').slice(0, 3);
 ---
@@ -38,11 +49,7 @@ const secondaryLinks = activeLinks.filter((link) => link.icon !== 'mail').slice(
     </p>
 
     <div class="hero__lower">
-      <p class="hero__lede" data-reveal="up" data-reveal-delay="260">
-        {profile.statement}
-      </p>
-
-      <div class="hero__actions" data-reveal="up" data-reveal-delay="330">
+      <div class="hero__actions" data-reveal="up" data-reveal-delay="260">
         {emailLink?.href && (
           <a class="button button--primary" href={emailLink.href}>
             <Icon name="mail" size={16} />
@@ -190,22 +197,15 @@ const secondaryLinks = activeLinks.filter((link) => link.icon !== 'mail').slice(
   }
 
   /* --- Lower block ---
-     The focus areas used to be repeated here as a column of mono tags, which
-     said exactly what the headline above already said. The block is now just
-     the positioning sentence and the actions. */
+     Just the actions. The focus areas used to be repeated here as a column of
+     mono tags saying what the headline already said, and the bio sentence was
+     repeated in About; both are gone. */
 
   .hero__lower {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: var(--space-xl);
-  }
-
-  .hero__lede {
-    font-size: var(--step-1);
-    line-height: 1.6;
-    color: var(--ink-muted);
-    max-width: 34rem;
   }
 
   .hero__actions {
@@ -342,13 +342,6 @@ const secondaryLinks = activeLinks.filter((link) => link.icon !== 'mail').slice(
 
     .hero__status {
       margin-bottom: var(--space-lg);
-    }
-
-    /* The positioning sentence is long; dropping it a step and tightening
-       its leading keeps the actions on the first screen of a 360px phone. */
-    .hero__lede {
-      font-size: var(--step-0);
-      line-height: 1.55;
     }
 
     .hero__lower {
