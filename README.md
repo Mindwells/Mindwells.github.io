@@ -168,6 +168,10 @@ content edge alignment, reading measure (real characters per line, counted
 from line boxes), and accessibility structure (landmarks, heading order,
 accessible names, duplicate ids, broken anchors, skip link).
 
+Contrast is checked at the level the reader asked for. The default palette
+clears WCAG AA; under `prefers-contrast: more` the greys and hairline rules
+are strengthened and the audit requires **AAA (7:1)** instead, in both themes.
+
 It also runs behavioural passes: `prefers-reduced-motion`, JavaScript
 disabled, the theme toggle, the mobile drawer, real Tab-key focus rings,
 dispatched pointer hovers (so a dead hover state fails), anchor landing

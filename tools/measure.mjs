@@ -47,7 +47,7 @@ const VIEWPORTS = [
  * Exported so `tools/selftest.mjs` can run the very same measurements against
  * deliberately broken pages and prove each check actually fires.
  *
- * @param {{ touch?: boolean }} options
+ * @param {{ touch?: boolean, highContrast?: boolean }} options
  */
 export async function measurementScript(options = {}) {
   /*
@@ -59,6 +59,13 @@ export async function measurementScript(options = {}) {
    */
   const minTarget = options.touch ? 44 : 24;
   const targetStandard = options.touch ? '44px (touch)' : '24px (pointer, WCAG 2.5.8 AA)';
+
+  /*
+   * A reader who asks their system for more contrast should get AAA (7:1),
+   * not the same AA floor as everyone else.
+   */
+  const minBodyContrast = options.highContrast ? 7 : 4.5;
+  const minLargeContrast = options.highContrast ? 7 : 3;
   const settle = (ms) => new Promise((r) => setTimeout(r, ms));
 
   const parseColor = (value) => {
@@ -208,7 +215,7 @@ export async function measurementScript(options = {}) {
       const fontSize = Number.parseFloat(style.fontSize);
       const weight = Number.parseInt(style.fontWeight, 10) || 400;
       const isLarge = fontSize >= 24 || (fontSize >= 18.66 && weight >= 700);
-      const required = isLarge ? 3 : 4.5;
+      const required = isLarge ? minLargeContrast : minBodyContrast;
 
       const record = {
         selector: describe(el),
@@ -1585,6 +1592,45 @@ async function main() {
 
     await cdp.send('Network.setCacheDisabled', { cacheDisabled: false });
   }
+
+  /* --- 7c. Increased contrast ---
+     A reader who has asked their system for more contrast should get AAA, not
+     the same AA palette as everyone else. Emulated at both themes, because the
+     dark greys need lightening while the light ones need darkening. */
+  for (const theme of ['light', 'dark']) {
+    process.stdout.write(`checking prefers-contrast: more (${theme}) … `);
+    await cdp.send('Emulation.setEmulatedMedia', {
+      media: '',
+      features: [
+        { name: 'prefers-contrast', value: 'more' },
+        { name: 'prefers-color-scheme', value: theme },
+      ],
+    });
+    await navigate(cdp, BASE, 1200);
+
+    const { result } = await cdp.send('Runtime.evaluate', {
+      expression: `(${measurementScript.toString()})(${JSON.stringify({ touch: false, highContrast: true })})`,
+      returnByValue: true,
+      awaitPromise: true,
+    });
+
+    const data = result.value;
+    report[`highContrast_${theme}`] = data;
+    const worst = data.contrastChecked.length
+      ? Math.min(...data.contrastChecked.map((c) => c.ratio))
+      : null;
+    verdict(
+      `prefers-contrast: more (${theme})`,
+      data.contrastIssues.length === 0,
+      data.contrastIssues.length
+        ? data.contrastIssues
+            .slice(0, 4)
+            .map((c) => `${c.ratio}:1 ${c.selector} (need ${c.required})`)
+            .join('; ')
+        : `worst ${worst}:1, needs 7:1`,
+    );
+  }
+  await cdp.send('Emulation.setEmulatedMedia', { media: '', features: [] });
 
   writeFileSync(join(outDir, 'report.json'), JSON.stringify(report, null, 2));
 

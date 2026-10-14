@@ -185,3 +185,44 @@
   --selection-bg: #2a3550;
   --selection-fg: #e8e6e1;
 }
+
+/* ---------------------------------------------------------------------------
+   Increased contrast.
+
+   The default greys clear WCAG AA (4.5:1) with margin, but AA is the floor,
+   not the ceiling: the tertiary greys sit around 5.3:1, which is short of the
+   7:1 that AAA asks for. A reader who has explicitly asked their system for
+   more contrast should get AAA, not the same palette as everyone else.
+
+   Rules darken too — hairline separators are the other thing that fades for
+   low-vision readers, and they carry the whole layout here.
+
+   Order matters: the dark variants must follow the light one so they win at
+   equal specificity.
+   --------------------------------------------------------------------------- */
+@media (prefers-contrast: more) {
+  :root {
+    --ink-muted: #3d4147; /* ~9.8:1 on paper */
+    --ink-subtle: #4a4e54; /* ~8.0:1 — still visibly lighter than muted */
+    --rule: #c9c5bd;
+    --rule-strong: #a8a49c;
+  }
+}
+
+@media (prefers-contrast: more) and (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --ink-muted: #b6bac1; /* ~9.8:1 */
+    --ink-subtle: #9ba0a8; /* ~7.3:1 */
+    --rule: #3a3f45;
+    --rule-strong: #545a62;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root[data-theme='dark'] {
+    --ink-muted: #b6bac1;
+    --ink-subtle: #9ba0a8;
+    --rule: #3a3f45;
+    --rule-strong: #545a62;
+  }
+}
